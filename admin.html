@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Admin Tex City</title>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1a0f08;--cream:#f6ead2;--red:#d8321f;--gold:#ffcf3a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--ink);font:14px 'Space Mono',monospace;min-height:100vh;padding:16px}
+.wrap{max-width:860px;margin:0 auto}
+h1{font-family:Bungee;color:var(--gold);font-size:26px;margin:4px 0 14px;text-shadow:3px 3px 0 var(--red)}
+.card{background:var(--cream);border:3px solid #000;box-shadow:6px 6px 0 #000;padding:16px;margin-bottom:16px;overflow-x:auto}
+h2{font-family:Bungee;font-size:18px;margin:0 0 10px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.stats div{background:#fff;border:2px solid #000;padding:10px}
+.stats small{display:block;opacity:.7;font-size:11px}
+.stats b{font-family:Bungee;font-size:20px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{border-bottom:1px solid #0003;padding:6px 4px;text-align:left;vertical-align:top}
+td.n,th.n{text-align:right}
+.muted{opacity:.7}.err{color:var(--red);font-weight:700}
+.who{color:var(--cream);font-size:12px;margin-bottom:12px}.who a{color:var(--gold);cursor:pointer}
+button{font-family:Bungee;font-size:14px;background:var(--red);color:var(--cream);border:2px solid #000;box-shadow:3px 3px 0 #000;padding:8px 14px;cursor:pointer}
+code{background:#fff;padding:1px 4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>ADMIN · TEX CITY</h1>
+  <div id="who" class="who"></div>
+  <div id="out"></div>
+</div>
+<script type="module">
+import * as NET from './net.js';
+const $ = (id) => document.getElementById(id);
+const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = (n) => Number(n || 0).toLocaleString('id-ID');
+const dt = (d) => (d ? new Date(d).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) : '-');
+
+async function load() {
+  const k = NET.kasirSession(), out = $('out');
+  if (!k) {
+    out.innerHTML = '<div class="card"><p>Masuk dulu di <a href="kasir.html">halaman kasir</a> dengan akun kasir yang punya <code>is_admin = true</code>, lalu buka halaman ini lagi.</p></div>';
+    return;
+  }
+  $('who').innerHTML = `Admin: <b>${esc(k.name)}</b> · <a id="re">muat ulang</a> · <a href="kasir.html">ke kasir</a>`;
+  $('re').onclick = load;
+  out.innerHTML = '<div class="card">Memuat…</div>';
+  let d;
+  try { d = await NET.kAdmin(); } catch (e) { out.innerHTML = `<div class="card err">${esc(NET.errText(e))}</div>`; return; }
+  const s = d.season || {}, set = d.settings || {}, rw = set.mission_rewards || {};
+  const missions = Object.keys(rw).map((id) => `<tr><td>${id}</td><td class="n">${fmt(rw[id])}</td><td class="n">${fmt(d.missions?.[id] || 0)}</td></tr>`).join('');
+  const ms = (d.milestones || []).map((m) => `<tr><td>${esc(m.season)} #${m.n}</td><td>${esc(m.prize)}</td><td>${esc(m.name)}<br><span class="muted">${esc(m.phone)}</span></td><td class="n">${fmt(m.earned)}</td><td>${dt(m.reached_at)}</td><td>${m.handed_at ? dt(m.handed_at) : '<b>belum</b>'}</td></tr>`).join('')
+    || '<tr><td colspan="6" class="muted">Belum ada pemenang.</td></tr>';
+  const rc = (d.receipts || []).map((r) => `<tr><td>${esc(r.code)}</td><td>${dt(r.created_at)}<br><span class="muted">${esc(r.cashier)}</span></td><td class="n">${fmt(r.fnb_rp)}</td><td class="n">${fmt(r.merch_rp)}</td><td>${(r.items || []).map((x) => esc(x.name) + (x.qty > 1 ? ' x' + x.qty : '')).join(', ')}</td><td class="n">${fmt(r.coins)}</td><td>${r.redeemed_at ? esc(r.player) + '<br><span class="muted">' + dt(r.redeemed_at) + '</span>' : new Date(r.expires_at) < new Date() ? '<span class="muted">kadaluarsa</span>' : 'menunggu'}</td></tr>`).join('')
+    || '<tr><td colspan="7" class="muted">Belum ada kode.</td></tr>';
+  const seasons = (d.seasons || []).map((x) => `<tr><td>${esc(x.id)}</td><td>${esc(x.name)}</td><td>${dt(x.starts_at)}</td><td>${dt(x.ends_at)}</td></tr>`).join('');
+  out.innerHTML = `
+  <div class="card"><h2>${esc(s.name || 'Tidak ada season aktif')}</h2>
+    <p class="muted">${s.id ? `${dt(s.starts_at)} s/d ${dt(s.ends_at)}` : ''}</p>
+    <div class="stats">
+      <div><small>Pemain terdaftar</small><b>${fmt(d.players)}</b></div>
+      <div><small>Aktif season ini</small><b>${fmt(d.players_season)}</b></div>
+      <div><small>Tex Coins earned</small><b>${fmt(d.earned)}</b></div>
+      <div><small>Dipakai di Wardrobe</small><b>${fmt(d.spent)}</b></div>
+      <div><small>Kode kasir dibuat</small><b>${fmt(d.receipts_made)}</b></div>
+      <div><small>Kode di-redeem</small><b>${fmt(d.receipts_redeemed)}</b></div>
+      <div><small>Koin dari kode</small><b>${fmt(d.receipt_coins)}</b></div>
+    </div>
+  </div>
+  <div class="card"><h2>Milestone</h2>
+    <table><tr><th>Season</th><th>Hadiah</th><th>Pemenang</th><th class="n">Earned</th><th>Tercapai</th><th>Diserahkan</th></tr>${ms}</table>
+    <p class="muted">Tandai hadiah sudah diserahkan: Supabase Table Editor, tabel <code>game_milestone_winners</code>, isi kolom <code>handed_at</code>.</p>
+  </div>
+  <div class="card"><h2>Misi</h2>
+    <table><tr><th>Misi</th><th class="n">Hadiah</th><th class="n">Selesai</th></tr>${missions}</table>
+  </div>
+  <div class="card"><h2>Kode kasir terbaru</h2>
+    <table><tr><th>Kode</th><th>Dibuat</th><th class="n">F&amp;B Rp</th><th class="n">Merch Rp</th><th>Item</th><th class="n">Koin</th><th>Status</th></tr>${rc}</table>
+  </div>
+  <div class="card"><h2>Pengaturan</h2>
+    <p>F&amp;B: <b>${fmt(set.fnb_rate)}</b> koin per Rp1.000 · Merch: <b>${fmt(set.merch_rate)}</b> koin per Rp1.000 · Kode berlaku <b>${fmt(set.receipt_hours)}</b> jam</p>
+    <table><tr><th>Season</th><th>Nama</th><th>Mulai</th><th>Selesai</th></tr>${seasons}</table>
+    <p class="muted">Ubah angka di Supabase Table Editor: tabel <code>game_settings</code> (rate, hadiah misi, milestone, katalog merch) dan <code>game_seasons</code> (tanggal season). Game membaca nilai baru saat dibuka ulang.</p>
+  </div>`;
+}
+load();
+</script>
+</body>
+</html>

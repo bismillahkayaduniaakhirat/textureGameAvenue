@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Kasir Tex City</title>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1a0f08;--cream:#f6ead2;--red:#d8321f;--gold:#ffcf3a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--ink);font:14px 'Space Mono',monospace;min-height:100vh;padding:16px}
+.wrap{max-width:560px;margin:0 auto}
+h1{font-family:Bungee;color:var(--gold);font-size:26px;margin:4px 0 14px;text-shadow:3px 3px 0 var(--red)}
+.card{background:var(--cream);border:3px solid #000;box-shadow:6px 6px 0 #000;padding:16px;margin-bottom:16px}
+h2{font-family:Bungee;font-size:18px;margin:0 0 10px}
+label{display:block;font-weight:700;margin:8px 0 4px}
+input,select{width:100%;font:700 16px 'Space Mono',monospace;padding:10px;border:2px solid #000;background:#fff;color:var(--ink);border-radius:0}
+button{font-family:Bungee;font-size:15px;background:var(--red);color:var(--cream);border:2px solid #000;box-shadow:3px 3px 0 #000;padding:10px 16px;cursor:pointer;margin-top:10px}
+button.ghost{background:transparent;color:var(--ink);box-shadow:none}
+button:disabled{background:#999}
+.tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.tabs button{margin:0;background:transparent;color:var(--cream);border-color:var(--cream);box-shadow:none}
+.tabs button.on{background:var(--gold);color:#000;border-color:#000}
+.big{font-family:Bungee;font-size:clamp(26px,9vw,40px);letter-spacing:2px;text-align:center;padding:14px;border:3px dashed #000;background:#fff;margin:10px 0;user-select:all}
+.muted{opacity:.7}.err{color:var(--red);font-weight:700}.ok{color:#137a2c;font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{border-bottom:1px solid #0003;padding:6px 4px;text-align:left}
+td.n{text-align:right}
+.mrow{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #0002}
+.mrow span{flex:1;font-size:13px}
+.mrow input{width:70px;text-align:center}
+.sum{background:#fff;border:2px solid #000;padding:10px;margin-top:10px}
+.hidden{display:none!important}
+.who{color:var(--cream);font-size:12px;margin-bottom:12px}.who a{color:var(--gold);cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>KASIR · TEX CITY</h1>
+  <div id="who" class="who"></div>
+
+  <div id="login" class="card hidden">
+    <h2>Masuk kasir</h2>
+    <label>Nama kasir</label><select id="lName"></select>
+    <label>PIN</label><input id="lPass" type="password" inputmode="numeric" maxlength="8" autocomplete="off">
+    <button id="lGo">MASUK</button>
+    <p id="lMsg" class="muted"></p>
+  </div>
+
+
+  <div id="app" class="hidden">
+    <div class="tabs"><button data-t="tNota" class="on">Kode Tex Coins</button><button data-t="tBoard">Pemain</button><button data-t="tVoucher">Voucher Lama</button></div>
+
+    <div id="tNota" class="card">
+      <h2>Buat kode Tex Coins</h2>
+      <label>Total F&amp;B Texture Coffee (Rp)</label>
+      <input id="nFnb" inputmode="numeric" placeholder="0">
+      <label>Merch fisik OutOfTex yang dibeli (jumlah)</label>
+      <div id="nItems"></div>
+      <div id="nPreview" class="sum muted">Isi nominal F&amp;B atau jumlah merch.</div>
+      <label>Catatan (opsional, misal no. nota)</label>
+      <input id="nNote" maxlength="80">
+      <button id="nGo">BUAT KODE</button>
+      <div id="nOut" class="hidden"><div id="nCode" class="big"></div><p id="nInfo"></p><p class="muted">Tunjukkan kode ke pelanggan. Pelanggan memasukkan kode di game: TEX WALLET, tab Tukar Kode. Berlaku 24 jam, sekali pakai.</p></div>
+      <p id="nMsg"></p>
+    </div>
+
+    <div id="tVoucher" class="card hidden">
+      <h2>Cek voucher OOT STORE lama</h2>
+      <label>Kode voucher</label>
+      <input id="vCode" placeholder="OOT-XXXX-XXXX" autocapitalize="characters">
+      <button id="vCheck">CEK</button>
+      <div id="vOut"></div>
+    </div>
+
+    <div id="tBoard" class="card hidden">
+      <h2>Pemain season ini</h2>
+      <p class="muted">Urut dari Season Earned. Data HP dan email hanya untuk menghubungi pemenang milestone.</p>
+      <table><thead><tr><th>#</th><th>Nama</th><th>HP</th><th class="n">Earned</th><th class="n">Misi</th></tr></thead><tbody id="bRows"></tbody></table>
+      <button id="bReload" class="ghost">Muat ulang</button>
+    </div>
+  </div>
+</div>
+<script type="module">
+import * as NET from './net.js';
+const $ = (id) => document.getElementById(id);
+const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let st = null;
+
+async function boot() {
+  const k = NET.kasirSession();
+  for (const id of ['login', 'app']) $(id).classList.add('hidden');
+  if (!k) {
+    $('who').textContent = ''; $('login').classList.remove('hidden');
+    try {
+      const names = await NET.kasirNames();
+      $('lName').innerHTML = names.map((n) => `<option>${esc(n)}</option>`).join('') || '<option value="">Belum ada kasir</option>';
+      if (!names.length) $('lMsg').textContent = 'Owner belum mengisi tabel game_cashiers di Supabase.';
+    } catch (e) { $('lMsg').textContent = NET.errText(e); }
+    return;
+  }
+  $('who').innerHTML = `Kasir: <b>${esc(k.name)}</b> · <a id="out">keluar</a>`;
+  $('out').onclick = async () => { await NET.kasirLogout(); boot(); };
+  try { st = await NET.settings(); } catch {}
+  renderItems(); preview();
+  $('app').classList.remove('hidden');
+}
+$('lGo').onclick = async () => {
+  $('lMsg').textContent = 'Masuk…'; $('lGo').disabled = true;
+  try { await NET.kasirLogin($('lName').value, $('lPass').value.replace(/\D/g, '')); $('lMsg').textContent = ''; boot(); }
+  catch (e) { $('lMsg').textContent = NET.errText(e); }
+  $('lPass').value = ''; $('lGo').disabled = false;
+};
+$('lPass').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('lGo').click(); });
+// A dead session sends the cashier back to the PIN screen.
+const guard = (e) => { if (String(e?.message).includes('SESI_KASIR_HABIS')) setTimeout(boot, 1500); };
+
+document.querySelectorAll('.tabs button').forEach((b) => b.onclick = () => {
+  document.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('on', x === b));
+  for (const t of ['tNota', 'tVoucher', 'tBoard']) $(t).classList.toggle('hidden', t !== b.dataset.t);
+  if (b.dataset.t === 'tBoard') loadBoard();
+});
+
+// Tex Coins = floor(Rp / 1000) x rate. The server recomputes everything; this is only the preview.
+const rp = (v) => Number(String(v).replace(/\D/g, '')) || 0;
+const fmt = (n) => Number(n || 0).toLocaleString('id-ID');
+const physical = () => (st?.tex_items || []).filter((i) => i.physical);
+function renderItems() {
+  $('nItems').innerHTML = physical().map((i) => `<div class="mrow"><span>${esc(i.name)}<br><small class="muted">Rp${fmt(i.rp)}</small></span><input data-id="${esc(i.id)}" inputmode="numeric" placeholder="0"></div>`).join('')
+    || '<p class="muted">Belum ada merch (jalankan supabase/texcity.sql).</p>';
+  for (const el of $('nItems').querySelectorAll('input')) el.oninput = preview;
+}
+const picked = () => [...$('nItems').querySelectorAll('input')].map((el) => ({ id: el.dataset.id, qty: rp(el.value) })).filter((x) => x.qty > 0);
+function preview() {
+  const fnb = rp($('nFnb').value), items = picked();
+  const merch = items.reduce((t, x) => t + (physical().find((i) => i.id === x.id)?.rp || 0) * x.qty, 0);
+  const cf = Math.floor(fnb / 1000) * Number(st?.fnb_rate ?? 4), cm = Math.floor(merch / 1000) * Number(st?.merch_rate ?? 20);
+  $('nPreview').innerHTML = fnb || items.length
+    ? `F&amp;B Rp${fmt(fnb)} → <b>${fmt(cf)}</b> · Merch Rp${fmt(merch)} → <b>${fmt(cm)}</b><br>Total: <b>${fmt(cf + cm)} Tex Coins</b>${items.length ? ` + ${items.length} item digital terbuka` : ''}`
+    : 'Isi nominal F&amp;B atau jumlah merch.';
+}
+$('nFnb').oninput = preview;
+$('nGo').onclick = async () => {
+  const fnb = rp($('nFnb').value), items = picked();
+  if (!fnb && !items.length) { $('nMsg').textContent = 'Isi nominal F&B atau jumlah merch.'; $('nMsg').className = 'err'; return; }
+  $('nGo').disabled = true; $('nMsg').textContent = '';
+  try {
+    const r = await NET.createReceipt2(fnb, items, $('nNote').value.trim());
+    $('nCode').textContent = r.code;
+    $('nInfo').innerHTML = `<b>${fmt(r.coins)} Tex Coins</b> (F&amp;B ${fmt(r.coins_fnb)} + merch ${fmt(r.coins_merch)})` +
+      (r.items?.length ? `<br>Item digital: ${r.items.map((x) => esc(x.name) + (x.qty > 1 ? ' x' + x.qty : '')).join(', ')}` : '') +
+      `<br><span class="muted">Berlaku s/d ${new Date(r.expires_at).toLocaleString('id-ID')}</span>`;
+    $('nOut').classList.remove('hidden'); $('nFnb').value = ''; $('nNote').value = '';
+    for (const el of $('nItems').querySelectorAll('input')) el.value = '';
+    preview();
+  } catch (e) { $('nMsg').textContent = NET.errText(e); $('nMsg').className = 'err'; guard(e); }
+  $('nGo').disabled = false;
+};
+
+async function checkV(commit) {
+  const out = $('vOut');
+  try {
+    const v = await NET.checkVoucher($('vCode').value, commit);
+    const state = v.used_at ? `<span class="err">SUDAH DIPAKAI ${new Date(v.used_at).toLocaleString('id-ID')}</span>`
+      : v.expired ? '<span class="err">KADALUARSA</span>' : '<span class="ok">BERLAKU</span>';
+    out.innerHTML = `<p><b>${esc(v.item)}</b><br>Pemain: ${esc(v.player)}<br>Berlaku s/d ${new Date(v.expires_at).toLocaleDateString('id-ID')}<br>Status: ${state}</p>` +
+      (!v.used_at && !v.expired ? '<button id="vUse">TANDAI SUDAH DIPAKAI</button>' : '');
+    // Two-tap confirm (native confirm() is blocked in some in-app browsers).
+    if ($('vUse')) $('vUse').onclick = () => {
+      if ($('vUse').dataset.sure) return checkV(true);
+      $('vUse').dataset.sure = '1'; $('vUse').textContent = 'YAKIN? TEKAN LAGI (TIDAK BISA DIBATALKAN)';
+    };
+  } catch (e) { out.innerHTML = `<p class="err">${esc(NET.errText(e))}</p>`; guard(e); }
+}
+$('vCheck').onclick = () => checkV(false);
+
+async function loadBoard() {
+  const tb = $('bRows'); tb.innerHTML = '<tr><td colspan="5">Memuat…</td></tr>';
+  try {
+    const rows = await NET.kPlayers(100);
+    tb.innerHTML = rows.map((r) => `<tr><td>${r.rank}</td><td>${esc(r.name)}<br><span class="muted">${esc(r.email)}</span>${r.prize ? `<br><b>Milestone: ${esc(r.prize)}</b>` : ''}</td><td>${esc(r.phone)}</td><td class="n">${fmt(r.earned)}</td><td class="n">${r.main_done}/7</td></tr>`).join('') || '<tr><td colspan="5">Belum ada pemain.</td></tr>';
+  } catch (e) { tb.innerHTML = `<tr><td colspan="5" class="err">${esc(NET.errText(e))}</td></tr>`; guard(e); }
+}
+$('bReload').onclick = loadBoard;
+boot();
+</script>
+</body>
+</html>
