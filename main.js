@@ -6,7 +6,7 @@ import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
    TEX CITY / Grand Tex Avenue - mini open-world web game (Kediri, sunset)
    Edit CONFIG below. Server values (Supabase game_settings) override it.
    ========================================================= */
-export const GAME_VERSION = '1.2.0'; // keep in step with VERSION and CHANGELOG.md
+export const GAME_VERSION = '1.3.0'; // keep in step with VERSION and CHANGELOG.md
 window.__ootVersion = GAME_VERSION;
 const CONFIG = {
   FNB_RATE: 10, MERCH_RATE: 10, COIN_UNIT_RP: 15000, // Tex Coins per Rp15.000 (server: fnb_rate / merch_rate / coin_unit_rp)
@@ -212,7 +212,6 @@ T.shoe = canvasTex(8, 8, (g) => { for (let y = 0; y < 8; y += 2) for (let x = 0;
 T.shirt = canvasTex(16, 16, (g, w, h) => { g.fillStyle = '#e9e7e2'; g.fillRect(0, 0, w, h); noise(g, w, h, 22, 2); });
 T.shorts = canvasTex(16, 16, (g, w, h) => { g.fillStyle = '#d4d6d8'; g.fillRect(0, 0, w, h); noise(g, w, h, 30, 2); g.fillStyle = '#9aa0a8'; g.fillRect(7, 0, 1, 16); });
 T.jersey = imgTex('assets/jersey_tex.jpg');
-T.crate = imgTex('assets/crate.jpg');
 T.coin = canvasTex(32, 32, (g) => { g.fillStyle = '#ffcf3a'; g.fillRect(0, 0, 32, 32); g.fillStyle = '#c98a12'; g.font = 'bold 13px monospace'; g.textAlign = 'center'; g.fillText('OOT', 16, 21); });
 
 const SHOP_NAMES = ['TAHU TAKWA', 'GETUK PISANG', 'PECEL TUMPANG', 'TOKO EMAS', 'TOKO SEPATU', 'BATIK KEDIRI', 'PONSEL JAYA', 'OPTIK', 'TOKO KAIN', 'APOTEK', 'SATE BEKICOT', 'NASI PECEL', 'BENGKEL', 'FOTOKOPI'];
@@ -399,16 +398,17 @@ const NAMED = [
   { id: 'aries', name: 'ARIES MOTOR', ll: [-7.8156213, 112.0135838], kind: 'showroom', wall: '#e9eef2', roof: '#8a8f96', accent: '#c8102e', fg: '#fff', h: 9 },
   { id: 'skdp', name: 'SKDP.', ll: [-7.8178821, 112.0128239], kind: 'cafe', wall: '#2e2c2a', roof: '#3a3634', accent: '#f2e8d2', fg: '#1a1a1a', h: 8 },
   { id: 'surya', name: 'GRAND SURYA', ll: [-7.817707, 112.0132129], kind: 'hotel', street: 'Jalan Dhoho', wall: '#e2e0da', roof: '#9a978f', accent: '#8a1f1f', fg: '#ffd86a', h: 9, hx: 9 },
-  { id: 'tropis', name: 'TROPIS COFFEE', ll: [-7.8190061, 112.0106658], kind: 'cafe', wall: '#a9a69c', roof: '#9c5a3c', accent: '#ffd86a', fg: '#1d3a22', h: 3.6, hx: 3.6 },
-  { id: 'setiabudi', name: 'SETIABUDI 6AM', ll: [-7.8187911, 112.0107452], kind: 'cafe', wall: '#f0ece2', roof: '#6a625c', accent: '#1f3a5a', fg: '#fff', h: 6 },
+  { id: 'tropis', name: 'TROPIS COFFEE', ll: [-7.8190061, 112.0106658], pick: [-136.3, -58.5], kind: 'cafe', wall: '#a9a69c', roof: '#9c5a3c', accent: '#ffd86a', fg: '#1d3a22', h: 3.6, hx: 3.6 },
+  { id: 'setiabudi', name: 'SETIABUDI 6AM', ll: [-7.8187911, 112.0107452], kind: 'cafe', street: 'Jalan Dokter Setiabudi', wall: '#f0ece2', roof: '#6a625c', accent: '#1f3a5a', fg: '#fff', h: 6 },
   { id: 'astonish', name: 'ASTONISH', ll: [-7.8199108, 112.0106423], kind: 'cafe', wall: '#222', roof: '#3a3634', accent: '#e9c46a', fg: '#1a1a1a', h: 6 },
   { id: 'sopo', name: 'WARKOP SOPO 1970', ll: [-7.8178701, 112.0100124], kind: 'warkop', wall: '#8a5a32', roof: '#7a3e28', accent: '#f6d36b', fg: '#3a1e0e', h: 5 },
+  { id: 'giekie', name: 'GIE KIE KONG SOE', ll: [-7.8177181, 112.0110774], kind: 'temple', wall: '#b8302a', roof: '#2f6a4a', accent: '#b3262a', fg: '#ffd24a', h: 6 },
 ];
 {
   const lat0 = -7.81925, lon0 = 112.01125, kx = 111320 * Math.cos(lat0 * Math.PI / 180), kz = 110540; // same frame as tools/build_kediri.py
   const inPoly = (p, x, z) => { let c = false; for (let i = 0, j = p.length - 2; i < p.length; j = i, i += 2) if ((p[i + 1] > z) !== (p[j + 1] > z) && x < (p[j] - p[i]) * (z - p[i + 1]) / (p[j + 1] - p[i + 1]) + p[i]) c = !c; return c; };
   for (const nb of NAMED) {
-    const [x, z] = toGame((nb.ll[1] - lon0) * kx, -(nb.ll[0] - lat0) * kz);
+    const [x, z] = nb.pick || toGame((nb.ll[1] - lon0) * kx, -(nb.ll[0] - lat0) * kz);
     let best = BLD.find((b) => !b.nm && !b.lmk && inPoly(b.p, x, z)) || null;
     if (!best) { let bd = 25; for (const b of BLD) { const d = Math.hypot(b.cx - x, b.cz - z); if (!b.nm && !b.lmk && d < bd) { bd = d; best = b; } } }
     if (best) { best.nm = nb; nb.b = best; }
@@ -488,27 +488,43 @@ BLD.forEach((b, bi) => { // plain footprint over a street centre line: leave it 
 /* ----- Texture Coffee (client café) ----- */
 function buildCafe() {
   const x0 = 8, x1 = 32, z0 = 10, z1 = 27, h = 9; const w = x1 - x0, d = z1 - z0;
-  const front = canvasTex(384, 144, (g, W, H) => {
-    g.fillStyle = '#cdb898'; g.fillRect(0, 0, W, H); noise(g, W, H, 40, 3);
-    // brick patches
-    for (let i = 0; i < 9; i++) { const bx = Math.random() < 0.5 ? Math.random() * 60 : W - 60 + Math.random() * 40; const by = 20 + Math.random() * (H - 40); for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) { g.fillStyle = ['#8a4a2e', '#a35a36', '#6e3a24'][(Math.random() * 3) | 0]; g.fillRect(bx + c * 8 + (r % 2) * 4, by + r * 4, 7, 3); } }
-    // upper windows
-    for (const wx of [40, 150, 260]) { g.fillStyle = '#3a2618'; g.fillRect(wx, 8, 84, 40); g.fillStyle = '#1e1a18'; g.fillRect(wx + 4, 12, 76, 32); g.fillStyle = '#3a2618'; g.fillRect(wx + 40, 12, 3, 32); }
-    // red emblem
-    g.fillStyle = '#b3423a'; g.beginPath(); g.arc(W / 2, 74, 26, Math.PI, 0); g.fill();
-    // ground floor: door + windows with warm interior
-    const warm = (x, y, ww, hh) => { const gr = g.createLinearGradient(0, y, 0, y + hh); gr.addColorStop(0, '#6a3a1a'); gr.addColorStop(1, '#e7a14e'); g.fillStyle = '#2a1a10'; g.fillRect(x - 3, y - 3, ww + 6, hh + 3); g.fillStyle = gr; g.fillRect(x, y, ww, hh); g.fillStyle = '#4a2a14'; for (let s = y + 10; s < y + hh - 6; s += 12) g.fillRect(x + 4, s, ww - 8, 2); };
-    warm(158, 92, 68, 52); warm(40, 96, 70, 34); warm(276, 96, 70, 34);
-    // sign
-    g.fillStyle = '#2b1c12'; g.fillRect(150, 80, 84, 11); g.fillStyle = '#f2e8d2'; g.font = 'bold 10px monospace'; g.textAlign = 'center'; g.fillText('TEXTURE COFFEE', 192, 89);
-    // garage sale poster
-    g.fillStyle = '#2a3c8a'; g.fillRect(240, 96, 22, 32); g.fillStyle = '#ffcf3a'; g.fillRect(242, 100, 18, 6); g.fillStyle = '#e23b3b'; g.fillRect(242, 108, 18, 10); g.fillStyle = '#fff'; g.fillRect(244, 120, 14, 5);
+  // Texture Coffee front, painted after the client's photo: 2-storey light sandstone, red half-sun emblem,
+  // wide open door in the middle (wall is 24 m x 9 m; x from the left edge, y up from the ground)
+  const front = canvasTex(512, 192, (g, W, H) => {
+    const m = W / 24, R = (x, y, ww, hh, c) => { g.fillStyle = c; g.fillRect(Math.round(x * m), Math.round(H - (y + hh) * m), Math.round(ww * m), Math.round(hh * m)); };
+    g.fillStyle = '#d6c9b1'; g.fillRect(0, 0, W, H); // mortar
+    const tints = ['#efe6d6', '#e6dbc7', '#f3ece0', '#e0d3bd', '#eadfcb'];
+    for (let y = 0, row = 0; y < H; y += 10, row++) for (let x = (row % 2) * -14; x < W; x += 28) { g.fillStyle = tints[(Math.random() * tints.length) | 0]; g.fillRect(x + 1, y + 1, 26, 8); }
+    const patch = (x0, y0, cols, rows) => { for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) { g.fillStyle = ['#c48464', '#d29a7a', '#b5735a'][(Math.random() * 3) | 0]; g.fillRect(x0 + c * 14 + (r % 2) * 7, y0 + r * 6, 13, 5); } };
+    patch(2, 150, 4, 7); patch(W - 64, 136, 4, 9); patch(W - 118, 168, 3, 4); patch(150, 60, 3, 3);
+    R(0, 4.5, 24, 0.4, '#cbbea6'); R(0, 4.42, 24, 0.08, '#a3937a'); // floor band
+    R(0, 8.6, 24, 0.4, '#d2c6ae'); R(0, 8.52, 24, 0.08, '#a3937a'); // parapet
+    // upper windows: dark wood frames, blue-grey glass with a sky glint
+    const win = (x, ww, panes) => {
+      R(x - 0.15, 6.05, ww + 0.3, 2.3, '#5a3e2c');
+      const pw = (ww - 0.15 * (panes - 1)) / panes;
+      for (let i = 0; i < panes; i++) { const px = x + i * (pw + 0.15); R(px, 6.15, pw, 2.1, '#3b4a58'); R(px + 0.12, 7.75, pw * 0.45, 0.12, '#93abbd'); R(px + 0.12, 7.5, pw * 0.25, 0.1, '#6f879a'); }
+      R(x - 0.3, 5.95, ww + 0.6, 0.12, '#cbbea6'); // sill
+    };
+    win(1.6, 2.8, 2); win(9.0, 6.0, 3); win(18.6, 2.8, 2);
+    // red emblem: the stepped half-sun under the middle window
+    g.fillStyle = '#c8322c'; g.beginPath(); g.ellipse(12 * m, H - 5.0 * m, 1.8 * m, 0.85 * m, 0, Math.PI, 0); g.fill();
+    g.fillStyle = '#e25a4c'; g.fillRect(Math.round(10.6 * m), Math.round(H - 5.55 * m), Math.round(1.2 * m), 3);
+    // ground floor: open door with a warm bar inside, wooden door leaf, two windows with green shutters
+    const warm = (x, y, ww, hh) => { const gr = g.createLinearGradient(0, H - (y + hh) * m, 0, H - y * m); gr.addColorStop(0, '#7a4a24'); gr.addColorStop(1, '#f0b060'); R(x - 0.12, y - 0.12, ww + 0.24, hh + 0.24, '#4a3020'); g.fillStyle = gr; g.fillRect(Math.round(x * m), Math.round(H - (y + hh) * m), Math.round(ww * m), Math.round(hh * m)); };
+    warm(8.6, 0.25, 6.2, 3.3);
+    for (const sy of [1.7, 2.4, 3.05]) { R(9.0, sy, 5.4, 0.08, '#5a3a20'); for (let cx = 9.2; cx < 14.2; cx += 0.55) R(cx, sy + 0.08, 0.22, 0.22, ['#f2e8d2', '#2a2a2a', '#b3423a'][((cx * 7) | 0) % 3]); }
+    R(9.4, 0.25, 4.6, 0.95, '#6b4426'); R(9.4, 1.15, 4.6, 0.1, '#8a5a32'); // counter
+    R(14.95, 0.25, 1.4, 3.3, '#7a4a2a'); for (const lx of [15.3, 15.65, 16.0]) R(lx, 0.35, 0.05, 3.1, '#5a3218'); // door leaf
+    const shopWin = (x) => { warm(x, 1.0, 3.0, 2.3); R(x + 1.47, 1.0, 0.06, 2.3, '#4a3020'); R(x - 0.75, 0.95, 0.6, 2.4, '#3f6a4a'); R(x + 3.15, 0.95, 0.6, 2.4, '#3f6a4a'); R(x - 0.1, 0.9, 3.2, 0.1, '#cbbea6'); };
+    shopWin(2.6); shopWin(18.4);
+    for (const lx of [8.1, 16.8]) { R(lx, 3.1, 0.25, 0.35, '#2a2a2a'); R(lx + 0.05, 3.15, 0.15, 0.22, '#ffd27a'); } // wall lamps
+    R(10.2, 3.72, 3.6, 0.55, '#2b1c12'); g.fillStyle = '#f2e8d2'; g.font = `bold ${Math.round(0.4 * m)}px monospace`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('TEXTURE COFFEE', 12 * m, H - 4.0 * m);
+    R(0, 0, 24, 0.25, '#a3937a'); // plinth
   });
-  const sideTex = canvasTex(64, 64, (g, W, H) => { g.fillStyle = '#c4ad8c'; g.fillRect(0, 0, W, H); noise(g, W, H, 40, 3); });
+  const sideTex = canvasTex(64, 64, (g, W, H) => { g.fillStyle = '#e2d7c3'; g.fillRect(0, 0, W, H); noise(g, W, H, 30, 3); });
   const sideM = lam({ map: sideTex });
-  // real facade art (assets/texture_front.jpg); the canvas above stays as the fallback until it loads
-  const frontM = lam({ map: front });
-  texLoader.load('assets/texture_front.jpg?v=1', (t) => { t.colorSpace = THREE.SRGBColorSpace; t.magFilter = THREE.NearestFilter; frontM.map = t; frontM.emissiveMap = t; frontM.emissive = new THREE.Color('#5a5a5a'); frontM.needsUpdate = true; }); // the wall faces away from the sun, so self-light keeps the art readable
+  const frontM = lam({ map: front, emissiveMap: front, emissive: new THREE.Color('#4a4a4a') }); // the wall faces away from the sun, so self-light keeps it readable
   const cafe = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [sideM, sideM, roofMat, roofMat, sideM, frontM]);
   cafe.position.set((x0 + x1) / 2, 0.25 + h / 2, (z0 + z1) / 2); scene.add(cafe); occluders.push(cafe);
   addSolid(x0, x1, z0, z1);
@@ -516,28 +532,27 @@ function buildCafe() {
   const aw = new THREE.Mesh(new THREE.BoxGeometry(w + 1, 0.15, 2.6), lam({ color: '#5a4636' })); aw.position.set(20, 4.3, z0 - 1.2); aw.rotation.x = 0.16; scene.add(aw);
   // warm glow from door
   const glow = new THREE.PointLight('#ffa040', 6, 12, 1.5); glow.position.set(20, 2, z0 - 1.5); scene.add(glow);
-  // crates, stools, cones
-  const crateMat = lam({ color: '#c22a22' });
-  const crate = (cx, cz, y = 0.25) => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.7, 0.9), crateMat); m.position.set(cx, y + 0.35, cz); scene.add(m); };
-  crate(9.5, 9.2); crate(9.5, 9.2, 0.95); crate(10.6, 9.2); crate(29.5, 9.2); crate(30.6, 9.2); crate(30.6, 9.2, 0.95);
-  addSolid(9, 11.1, 8.7, 9.7); addSolid(29, 31.1, 8.7, 9.7);
-  const stoolMat = lam({ color: '#e8e4dc' });
-  const stool = (sx, sz) => { const s = new THREE.Group(); const top = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.08, 0.6), stoolMat); top.position.y = 0.7; s.add(top); for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const l = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.7, 0.07), stoolMat); l.position.set(a * 0.24, 0.35, b * 0.24); l.rotation.z = a * 0.06; s.add(l); } s.position.set(sx, 0.25, sz); scene.add(s); };
-  stool(12.5, 8.6); stool(14, 9); stool(26.5, 8.8); stool(27.8, 8.5);
+  // terrace: 2 table sets left of the door and 2 right, all on one line along the facade
+  const tableMat = lam({ color: '#7a4e2c' }), chairMat = lam({ color: '#e8e4dc' });
+  const tableSet = (cx, cz) => {
+    const s = new THREE.Group();
+    const top = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, 0.9), tableMat); top.position.y = 0.75; s.add(top);
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.72, 0.12), tableMat); leg.position.y = 0.36; s.add(leg);
+    for (const a of [-1, 1]) { // a chair on each side, backrest away from the table
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.07, 0.5), chairMat); seat.position.set(a * 0.85, 0.46, 0); s.add(seat);
+      const back = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.5, 0.5), chairMat); back.position.set(a * 1.08, 0.72, 0); s.add(back);
+      for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const l = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.44, 0.06), chairMat); l.position.set(a * 0.85 + dx * 0.2, 0.22, dz * 0.2); s.add(l); }
+    }
+    s.position.set(cx, 0.25, cz); scene.add(s);
+    addSolid(cx - 1.15, cx + 1.15, cz - 0.4, cz + 0.4);
+  };
+  for (const tx of [10.8, 14.0, 26.0, 29.2]) tableSet(tx, 8.5);
   const cone = (cx, cz) => { const c = new THREE.Group(); const a = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.8, 6), lam({ color: '#ff6a1a' })); a.position.y = 0.4; c.add(a); const b = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.2, 0.12, 6), lam({ color: '#fff' })); b.position.y = 0.5; c.add(b); c.position.set(cx, groundY(cx, cz), cz); scene.add(c); };
   cone(14, 3.6); cone(26, 3.6);
-  // OOT sign pole
-  const pole = new THREE.Mesh(new THREE.BoxGeometry(0.15, 4, 0.15), lam({ color: '#555' })); pole.position.set(6.2, 2.25, 6.5); scene.add(pole);
-  const signTex = canvasTex(64, 80, (g) => { g.fillStyle = '#f2e8d2'; g.fillRect(0, 0, 64, 80); g.strokeStyle = '#b3262a'; g.lineWidth = 5; g.beginPath(); g.ellipse(32, 34, 24, 18, 0, 0, Math.PI * 2); g.stroke(); g.fillStyle = '#b3262a'; g.font = 'bold 18px monospace'; g.textAlign = 'center'; g.fillText('OOT', 32, 41); g.font = 'bold 9px monospace'; g.fillText('GARAGE', 32, 66); g.fillText('SALE 11.11', 32, 76); });
-  const sign = new THREE.Mesh(new THREE.BoxGeometry(1.6, 2, 0.12), [lam({ color: '#ddd' }), lam({ color: '#ddd' }), lam({ color: '#ddd' }), lam({ color: '#ddd' }), lam({ map: signTex }), lam({ map: signTex })]);
-  sign.position.set(6.2, 3.4, 6.4); scene.add(sign);
-  addSolid(6, 6.4, 6.3, 6.7);
+  // small trees at the corner of the lot
+  tree(6.4, 6.4, 0.55); tree(6.6, 8.9, 0.45);
   // corrugated fence on left
   const fence = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.6, 16), lam({ color: '#6b4a32' })); fence.position.set(6, 1.55, 19); scene.add(fence);
-  // garage sale crate (merch) with real crate art on top
-  const wood = lam({ color: '#a8803e' });
-  const gcrate = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.8, 1.4), [wood, wood, lam({ map: T.crate }), wood, wood, wood]);
-  gcrate.position.set(23.5, 0.65, 8.9); scene.add(gcrate); addSolid(22.8, 24.2, 8.2, 9.6);
 }
 { // the café lot: raised pavement slab + the café itself
   const L = CAFE_LOT, w = L.x1 - L.x0, d = L.z1 - L.z0;
@@ -705,6 +720,18 @@ const FACADE = {
     }
     R(0, 0, L, 0.18, '#7d7a72');
   },
+  // Chinese temple front: red walls, white plinth, green glazed eave, carved gold-studded doors, round lanterns
+  giekie(p) {
+    const { L, h, R, fit, g, sx, Y } = p;
+    R(0, 0, L, h, '#b8302a'); R(0, 0, L, 0.6, '#e9e2d2'); R(0, 0.6, L, 0.08, '#8a1f1a');
+    R(0, h - 0.7, L, 0.7, '#2f6a4a'); for (let x = 0; x < L; x += 0.4) R(x, h - 0.7, 0.06, 0.7, '#245238'); R(0, h - 0.8, L, 0.1, '#e0b040');
+    for (const x of [0.3, L - 0.75]) R(x, 0.6, 0.45, h - 1.4, '#8a1f1a'); // pillars
+    const dw = Math.min(3, L * 0.4), dx = L / 2 - dw / 2;
+    R(dx - 0.3, 0.6, dw + 0.6, 3.2, '#e0b040'); R(dx, 0.6, dw, 2.9, '#7a1612'); R(L / 2 - 0.03, 0.6, 0.06, 2.9, '#3a0a08');
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) R(dx + 0.2 + i * (dw - 0.5) / 3, 1.1 + j * 0.8, 0.1, 0.1, '#e0b040'); // door studs
+    for (const x of [dx - 1.0, dx + dw + 1.0]) { R(x - 0.04, 3.7, 0.08, 0.35, '#e0b040'); g.fillStyle = '#ff3a2a'; g.beginPath(); g.ellipse(x * sx, Y(3.3), 0.38 * sx, 0.45 * sx, 0, 0, 7); g.fill(); R(x - 0.15, 2.8, 0.3, 0.08, '#e0b040'); }
+    if (h > 5) { R(L / 2 - 1.7, 3.95, 3.4, 0.7, '#1a1a1a'); fit('GIE KIE KONG SOE', L / 2, 4.3, 0.42, 3.1, '#ffd24a'); }
+  },
   // colonial station hall: white walls, red dado, arched doors with fanlights, corrugated roof, KEDIRI on the gable
   stasiun(p) {
     const { L, h, R, speck, T, fit, g, sx, sy, Y } = p;
@@ -776,6 +803,22 @@ function facadeTex(nb, L, h) {
 }
 // 3D roofs + street furniture for Tropis (tiled roof, stone pier, stools) and Stasiun Kediri (corrugated gable
 // with KEDIRI on the fascia, porch roof, woven planters). Same local frame as buildSurya.
+// Name board on two posts at the street edge of the roof (client: building name above the building, like TROPIS COFFEE).
+// Both faces carry the name, unlit material so it reads at night too. Tropis sits it on the ridge of its tiled roof.
+function roofBoard(nb, f, h) {
+  const g = new THREE.Group(); g.position.set(f.mx, 0, f.mz); g.rotation.y = Math.atan2(f.nx, f.nz); scene.add(g);
+  const bh = 1.4, bw = Math.min(Math.max(f.L - 0.6, 4), nb.name.length * 0.7 + 1.4);
+  const base = nb.id === 'tropis' ? h + 2.0 : h, z = nb.id === 'tropis' ? -3.5 : -0.9;
+  const face = new THREE.MeshBasicMaterial({ map: canvasTex(Math.round(bw * 40), 56, (c, W, H) => {
+    c.fillStyle = '#111'; c.fillRect(0, 0, W, H); c.fillStyle = nb.accent; c.fillRect(3, 3, W - 6, H - 6);
+    let fs = 36; c.font = `bold ${fs}px monospace`; while (fs > 10 && c.measureText(nb.name).width > W - 16) { fs--; c.font = `bold ${fs}px monospace`; }
+    c.fillStyle = nb.fg; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(nb.name, W / 2, H / 2 + 2);
+  }, false) });
+  const frame = lam({ color: '#2a2a2a' });
+  const board = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, 0.2), [frame, frame, frame, frame, face, face]); board.position.set(0, base + 0.8 + bh / 2, z); g.add(board);
+  for (const s of [-1, 1]) { const post = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.9, 0.15), frame); post.position.set(s * (bw / 2 - 0.5), base + 0.45, z); g.add(post); }
+}
+// 3D roofs + street furniture: see the per-id branches below
 function buildFrontProps(nb, f) {
   const g = new THREE.Group(); g.position.set(f.mx, 0, f.mz); g.rotation.y = Math.atan2(f.nx, f.nz); scene.add(g);
   const bx = (w, h, d, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); g.add(m); return m; };
@@ -907,11 +950,40 @@ for (const nb of NAMED) {
   nb.front = best;
   const extra = nb.id === 'surya' ? buildSurya(nb, best) : null;
   if (nb.id === 'tropis' || nb.id === 'stasiun' || nb.id === 'aries') buildFrontProps(nb, best);
-  if (nb.kind !== 'station') label3D(nb.name, b.cx, extra ? extra.tower + 3 : h + 4, b.cz, nb.accent, nb.fg, 0.8);
+  if (nb.kind !== 'station') { if (extra || nb.kind === 'hotel') label3D(nb.name, b.cx, extra ? extra.tower + 3 : h + 4, b.cz, nb.accent, nb.fg, 0.8); else roofBoard(nb, best, h); }
   if (nb.kind === 'hotel' && !extra) { // rooftop billboard
     const grey = lam({ color: '#333' }), face = textSign(nb.name, nb.accent, nb.fg, 256, 56, 34);
     const bb = new THREE.Mesh(new THREE.BoxGeometry(Math.min(14, best.L), 3, 0.3), [grey, grey, grey, grey, face, face]);
     bb.position.set(b.cx, h + 3.2, b.cz); bb.rotation.y = Math.atan2(best.nx, best.nz); scene.add(bb);
+  }
+}
+
+{ // Setono Gedong: brick candi-bentar gate (client P5) across Jl. Makam Al Wasil, at the end of the road where the tomb complex starts
+  const lat0 = -7.81925, lon0 = 112.01125, kx = 111320 * Math.cos(lat0 * Math.PI / 180), kz = 110540;
+  const [px, pz] = toGame((112.0116698 - lon0) * kx, -(-7.8163776 - lat0) * kz);
+  const near = (only) => { let best = null; for (const r of MAP.roads) { if (r.c > 6 || (only && MAP.names[r.n] !== only)) continue; const p = r.p; for (let i = 0; i + 3 < p.length; i += 2) { const ax = p[i], az = p[i + 1], dx = p[i + 2] - ax, dz = p[i + 3] - az, L2 = dx * dx + dz * dz || 1; const t = clamp(((px - ax) * dx + (pz - az) * dz) / L2, 0, 1), fx = ax + dx * t, fz = az + dz * t, d = Math.hypot(px - fx, pz - fz); if (!best || d < best.d) best = { d, t, fx, fz, dx, dz, w: r.w }; } } return best; };
+  const best = near('Jalan Makam Al Wasil') || near();
+  if (best && best.d < 80) {
+    const m = Math.hypot(best.dx, best.dz) || 1, ux = best.dx / m, uz = best.dz / m, back = best.t > 0.99 ? -3 : best.t < 0.01 ? 3 : 0; // step off the dead end
+    const cx = best.fx + ux * back, cz = best.fz + uz * back, yaw = Math.atan2(ux, uz); // local x spans the road, the sign faces along it
+    const gate = new THREE.Group(); gate.position.set(cx, 0, cz); gate.rotation.y = yaw; scene.add(gate);
+    const brick = lam({ map: canvasTex(32, 32, (c, W, H) => { c.fillStyle = '#7a3a24'; c.fillRect(0, 0, W, H); for (let y = 0; y < H; y += 4) for (let x = (y / 4) % 2 ? -4 : 0; x < W; x += 8) { c.fillStyle = ['#b0583a', '#9c4c30', '#c2653f'][(Math.random() * 3) | 0]; c.fillRect(x + 1, y + 1, 7, 3); } }) });
+    const stone = lam({ color: '#8f8a7e' });
+    const half = best.w / 2 + 0.4; // the opening keeps the whole carriageway free
+    const tiers = [[2.4, 1.0], [2.0, 1.6], [1.7, 1.0], [1.3, 0.8], [0.9, 0.7], [0.5, 0.6]]; // [width, height] of each step, bottom up
+    for (const s of [-1, 1]) {
+      let y = 0;
+      for (const [tw, th] of tiers) { const b = new THREE.Mesh(new THREE.BoxGeometry(tw, th, tw * 0.9), y ? brick : stone); b.position.set(s * (half + tw / 2), y + th / 2, 0); gate.add(b); y += th; }
+      const cap = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.6, 4), stone); cap.position.set(s * (half + 0.25), y + 0.3, 0); gate.add(cap);
+      gridBox(cx + Math.cos(yaw) * s * (half + 1.2), cz - Math.sin(yaw) * s * (half + 1.2), 2.4, 2.2, 5.7, yaw);
+    }
+    const signM = new THREE.MeshBasicMaterial({ map: canvasTex(208, 40, (c, W, H) => {
+      c.fillStyle = '#3a2a1e'; c.fillRect(0, 0, W, H); c.strokeStyle = '#d8b04a'; c.lineWidth = 2; c.strokeRect(2, 2, W - 4, H - 4);
+      c.fillStyle = '#f2e8d2'; c.font = 'bold 15px monospace'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('MAKAM SETONO GEDONG', W / 2, H / 2 + 1);
+    }, false) });
+    const sw = Math.max(3.6, half * 2 + 0.6);
+    const sign = new THREE.Mesh(new THREE.BoxGeometry(sw, sw * 0.19, 0.12), [stone, stone, stone, stone, signM, signM]); sign.position.set(0, 4.6, 0); gate.add(sign);
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(half * 2 + 1, 0.2, 0.2), stone); beam.position.set(0, 4.0, 0); gate.add(beam);
   }
 }
 
@@ -1355,6 +1427,25 @@ function frontSpot(id, off = 3) { // standing spot in front of a named building
 }
 const llSpot = (ll) => kerbFront(...latLonToGame(ll[0], ll[1]));
 const SETONO = [-7.8163776, 112.0116698], ORION = [-7.8159821, 112.0142145];
+// named pins on the full map (client list). src: a NAMED building id, or [lat, lon]; null = location still unknown
+const MAP_PINS = [
+  ['ARIES MOTOR', 'aries'], ['STASIUN KEDIRI', 'stasiun'], ['TOKO KOPI RUKUN WARGA', null], ['ST 18', null],
+  ['HOTEL GRAND SURYA', 'surya'], ['SKDP', 'skdp'], ['TROPIS COFFEE', 'tropis'], ['SETIABUDI 6AM', 'setiabudi'],
+  ['ASTONISH', 'astonish'], ['WARKOP SOPO', 'sopo'], ['GIE KIE KONG SOE', 'giekie'], ['SETONO GEDONG', SETONO],
+];
+let PIN_POS = null;
+function mapPins() { // resolved once: [name, x, z]
+  if (PIN_POS) return PIN_POS;
+  PIN_POS = [];
+  for (const [name, src] of MAP_PINS) {
+    if (!src) continue;
+    let x, z;
+    if (typeof src === 'string') { const nb = NAMED.find((n) => n.id === src); if (!nb) continue; if (nb.b) { x = nb.b.cx; z = nb.b.cz; } else [x, z] = latLonToGame(nb.ll[0], nb.ll[1]); }
+    else [x, z] = latLonToGame(src[0], src[1]);
+    PIN_POS.push([name, x, z]);
+  }
+  return PIN_POS;
+}
 function behindAries() {
   const nb = NAMED.find((n) => n.id === 'aries'), f = nb?.front, b = nb?.b;
   if (!f || !b) return dhoho(1);
@@ -1391,23 +1482,22 @@ function ensureBillboard() {
     const st = new THREE.Mesh(new THREE.BoxGeometry(0.26, len, 0.26), steel); st.position.set((x0 + x1) / 2, (y0 + y1) / 2, 0); st.rotation.z = -Math.atan2(x1 - x0, y1 - y0); g.add(st);
   }
   { const arm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 4.4), steel); arm.position.set(-s * 0.2, 13.2, 2.4 + COL / 2); g.add(arm); box(0.5, 0.22, 0.9, lam({ color: '#e8e6dc', emissive: '#6a6450' }), -s * 0.2, 13.05, 4.5 + COL / 2, g); } // street lamp arm
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), new THREE.MeshBasicMaterial({ map: canvasTex(480, 264, (c, W, H) => {
+  const LOGO = { x: 22, y: 22, s: 174 }; // Texture logo panel on the left of the screen
+  const scan = (c, x, y, w, h) => { c.fillStyle = 'rgba(0,0,0,.18)'; for (let yy = y; yy < y + h; yy += 3) c.fillRect(x, yy, w, 1); }; // LED scanlines
+  const faceTex = canvasTex(480, 264, (c, W, H) => {
     const body = H - 46;
     const gr = c.createLinearGradient(0, 0, W, body); gr.addColorStop(0, '#3a2414'); gr.addColorStop(0.55, '#7a4a22'); gr.addColorStop(1, '#2a1a10'); c.fillStyle = gr; c.fillRect(0, 0, W, body);
     c.fillStyle = 'rgba(255,214,140,.10)'; for (let i = 0; i < 7; i++) c.fillRect(30 + i * 64, 0, 26, body); // café interior light bands
-    c.fillStyle = '#f2e8d2'; c.fillRect(46, 64, 74, 92); c.fillStyle = '#6a3a1a'; c.fillRect(54, 72, 58, 20); // big cup
-    c.strokeStyle = '#f2e8d2'; c.lineWidth = 9; c.beginPath(); c.arc(124, 108, 20, -1.3, 1.3); c.stroke();
-    c.fillStyle = '#d9cfb8'; c.fillRect(30, 158, 106, 10);
-    c.strokeStyle = 'rgba(242,232,210,.6)'; c.lineWidth = 4; for (const dx of [62, 82, 102]) { c.beginPath(); c.moveTo(dx, 56); c.quadraticCurveTo(dx + 10, 40, dx, 24); c.stroke(); }
-    c.textAlign = 'left'; c.fillStyle = '#f2e8d2'; c.font = 'bold 22px monospace'; c.fillText('WELCOME TO', 170, 70);
-    c.fillStyle = '#ffcf3a'; c.font = 'bold 62px monospace'; c.fillText('TEX CITY', 166, 130);
-    c.fillStyle = '#f2e8d2'; c.font = 'bold 18px monospace'; c.fillText('KEDIRI STORIES', 172, 162);
-    c.fillStyle = '#c41e24'; c.fillRect(172, 176, 220, 4);
+    c.fillStyle = '#f2e8d2'; c.fillRect(LOGO.x, LOGO.y, LOGO.s, LOGO.s); // cream panel; the logo is drawn on it once loaded
+    c.textAlign = 'center'; c.fillStyle = '#f2e8d2'; c.font = 'bold 26px monospace'; c.fillText('WELCOME TO', 334, 88);
+    c.fillStyle = '#ffcf3a'; c.font = 'bold 50px monospace'; c.fillText('TEX CITY', 334, 142);
+    c.fillStyle = '#c41e24'; c.fillRect(224, 160, 220, 4);
     c.fillStyle = '#0c0c0c'; c.fillRect(0, body, W, H - body);
-    c.fillStyle = '#ffcf3a'; c.font = 'bold 14px monospace'; c.fillText('INFO KOTA', 12, body + 18);
-    c.fillStyle = '#e8e8e8'; c.font = '12px monospace'; c.fillText('NGOPI DULU DI TEXTURE COFFEE · JL. DR. WAHIDIN', 12, body + 36);
-    c.fillStyle = 'rgba(0,0,0,.18)'; for (let y = 0; y < H; y += 3) c.fillRect(0, y, W, 1); // LED scanlines
-  }, false) }));
+    c.fillStyle = '#ffcf3a'; c.font = 'bold 19px monospace'; c.fillText('Jelajahi kota, Temukan ceritamu sendiri', W / 2, body + 29);
+    scan(c, 0, 0, W, H);
+  }, false);
+  { const img = new Image(); img.onload = () => { const c = faceTex.image.getContext('2d'); c.drawImage(img, LOGO.x + 4, LOGO.y + 4, LOGO.s - 8, LOGO.s - 8); scan(c, LOGO.x, LOGO.y, LOGO.s, LOGO.s); faceTex.needsUpdate = true; }; img.src = 'assets/texture_logo.png'; }
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), new THREE.MeshBasicMaterial({ map: faceTex }));
   face.position.set(sx, SY + SH / 2, 0.36); g.add(face);
   const back = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), dark); back.position.set(sx, SY + SH / 2, -0.36); back.rotation.y = Math.PI; g.add(back);
   const px = x + ux * 1.4, pz = z + uz * 1.4;
@@ -1456,7 +1546,7 @@ function explorerSpots() {
   return s;
 }
 const MDEF = {
-  T1: { name: 'Arrival in Tex City', desc: 'Perjalanan pertamamu. Ikuti checkpoint di Jalan Dhoho sampai billboard selamat datang.', at: () => [CAFE.x + 3, 1.8],
+  T1: { name: 'Arrival in Tex City', desc: 'Perjalanan pertamamu. Ikuti checkpoint di Jalan Dhoho sampai billboard selamat datang.', at: () => gatePos(),
     stages: () => [
       [tgt(dhoho(0.05), { label: 'checkpoint 1', toast: 'Checkpoint 1! Lanjut ke utara.' })],
       [tgt(dhoho(0.3), { label: 'checkpoint 2', say: ['Mantap! Tahan Shift (atau tombol LARI) buat lari.', 'Lihat motor di pinggir jalan? Dekati lalu tekan F atau tombol MOTOR buat naik.'] })],
@@ -1671,7 +1761,7 @@ let promptFor = null;   // mission id being offered
 let suppress = null;    // marker you declined (until you step away)
 let carryBox = null;
 function setCarry(on) {
-  if (on && !carryBox) { carryBox = box(0.5, 0.38, 0.38, cm({ map: T.crate }), 0, 1.15, 0.38, player.group); player.parts.carry = carryBox; }
+  if (on && !carryBox) { carryBox = box(0.5, 0.38, 0.38, cm({ color: '#b08a5a' }), 0, 1.15, 0.38, player.group); player.parts.carry = carryBox; }
   if (!on && carryBox) { player.group.remove(carryBox); carryBox = null; delete player.parts.carry; }
 }
 function missionPrompt(id) {
@@ -1720,7 +1810,7 @@ function reachTarget(t) {
   if (t.toast) toast(t.toast);
   stageInfo();
   const after = () => { if (active === a && a.stages[a.si].every((q) => q.done)) nextStage(); };
-  if (t.say) say(t.say, 'Mas Tex', after); else after();
+  if (t.say) say(t.say, INTRO_SPEAKER, after); else after();
 }
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 async function finishMission() {
@@ -1976,8 +2066,8 @@ function respawn() {
   cam.yaw = gh; P.lastHit = clock.elapsedTime; updateHUD(); toast('HP penuh lagi. Hati-hati di jalan!');
 }
 $('btnRespawn').onclick = respawn;
-// Start / respawn point: Texture Coffee's front door, facing the street (the opening video ends here too)
-const homePos = () => [CAFE.x + 3, 4.2, Math.PI]; // beside the partner pin (20, 5.8), so its card does not pop up at spawn
+// Start / respawn point: the Jl. Dhoho intersection (the CFD gate below), facing north up the street
+const homePos = () => gatePos();
 // TEX CITY entrance: the CFD gate at the south end of Jl. Dhoho (kerb next to the road, facing north up the street)
 let GATE = null;
 function gatePos() {
@@ -2029,7 +2119,7 @@ function drawRadar() {
     radar.beginPath(); radar.arc(sx, sy, rad, 0, 7); radar.fill(); radar.stroke();
     if (label) { radar.fillStyle = '#000'; radar.font = 'bold 9px monospace'; radar.textAlign = 'center'; radar.fillText(label, sx, sy + 3); }
   };
-  for (const pl of PLACES) if (!active) dot(pl.x, pl.z, '#2ad1c2', 4);
+  if (!active) { for (const pl of PLACES) dot(pl.x, pl.z, '#2ad1c2', 4); for (const [, x, z] of mapPins()) dot(x, z, '#2ad1c2', 3); }
   if (TRAIN) for (const c of TRAIN.cars) if (c.visible) dot(c.position.x, c.position.z, '#d9622b', 2.5);
   dot(20, 12, '#b3262a', 6, true, 'T');
   { const nb = P.onBike ? null : bikes.reduce((a, b) => (Math.hypot(b.pos.x - px, b.pos.z - pz) < Math.hypot(a.pos.x - px, a.pos.z - pz) ? b : a));
@@ -2063,7 +2153,8 @@ function mapZoom(k, sx, sy) { // zoom around a screen point
 function drawMap() {
   const dpr = Math.min(2, devicePixelRatio || 1), W = mapCv.clientWidth, H = mapCv.clientHeight; if (!W || !H) return;
   if (mapCv.width !== Math.round(W * dpr) || mapCv.height !== Math.round(H * dpr)) { mapCv.width = Math.round(W * dpr); mapCv.height = Math.round(H * dpr); }
-  MV.cx = clamp(MV.cx, 0, GW); MV.cy = clamp(MV.cy, 0, GH);
+  { const hx = W / 2 / MV.zoom, hy = H / 2 / MV.zoom; // keep the map filling the view (centred when it is smaller)
+    MV.cx = GW > hx * 2 ? clamp(MV.cx, hx, GW - hx) : GW / 2; MV.cy = GH > hy * 2 ? clamp(MV.cy, hy, GH - hy) : GH / 2; }
   const z = MV.zoom, g = mctx;
   g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = '#4a4936'; g.fillRect(0, 0, W, H);
   g.setTransform(dpr * z, 0, 0, dpr * z, dpr * (W / 2 - MV.cx * z), dpr * (H / 2 - MV.cy * z)); g.imageSmoothingEnabled = z < 1.5; g.drawImage(mapImg, 0, 0);
@@ -2076,10 +2167,24 @@ function drawMap() {
     const seen = new Set();
     for (const rd of MAP.roads) { if (!rd.n || rd.c > 4 || seen.has(rd.n)) continue; const p = rd.p, k = Math.floor(p.length / 4) * 2; const [x, y] = toS(p[k], p[k + 1]); if (x < 0 || y < 0 || x > W || y > H) continue; seen.add(rd.n); label(prettyRoad(MAP.names[rd.n]), x, y + 4, '#ffe9a8', 10); }
   }
-  for (const l of MAP.lm) { if (l.id === 'texture') continue; const [x, y] = toS(l.x, l.z); g.fillStyle = '#fff'; g.beginPath(); g.arc(x, y, 3, 0, 7); g.fill(); label(l.id === 'plaza' ? 'PLAZA' : l.name, x, y - 7); }
+  const pins = mapPins(), pinned = new Set(pins.map((p) => p[0]));
+  for (const l of MAP.lm) { if (l.id === 'texture' || pinned.has(l.name)) continue; const [x, y] = toS(l.x, l.z); g.fillStyle = '#fff'; g.beginPath(); g.arc(x, y, 3, 0, 7); g.fill(); label(l.id === 'plaza' ? 'PLAZA' : l.name, x, y + 14); } // below the dot: pin labels sit above theirs
   if (!active) { for (const [id, m] of markers) pin(m.x, m.z, '#ffcf3a', mLabel(id), 7); }
   else if (active.stages[active.si]) { for (const t of active.stages[active.si]) if (!t.done) pin(t.x, t.z, '#ff3a2a', '', 6); }
-  for (const pl of PLACES) { const [x, y] = pin(pl.x, pl.z, '#2ad1c2', '', 6); if (Math.hypot(pl.x - 20, pl.z - 12) > 20 && z >= 1.2) label(pl.name.toUpperCase(), x, y - 10, '#9ff5ec', 10); }
+  { // partner places + named landmark pins; labels dodge each other (above, then below, else hidden until zoomed in)
+    const boxes = [], fits = (x, y, w) => !boxes.some((b) => Math.abs(b[0] - x) < (b[2] + w) / 2 + 2 && Math.abs(b[1] - y) < 12);
+    const all = PLACES.filter((pl) => Math.hypot(pl.x - 20, pl.z - 12) > 20).map((pl) => [pl.name.toUpperCase(), pl.x, pl.z]);
+    for (const p of pins) if (!all.some((a) => a[0] === p[0])) all.push(p);
+    for (const pl of PLACES) pin(pl.x, pl.z, '#2ad1c2', '', 6);
+    const dots = all.map(([, px, pz]) => pin(px, pz, '#2ad1c2', '', 6));
+    for (const [x, y] of dots) boxes.push([x, y + 4, 12]); // labels keep off the pins themselves
+    for (const [i, [name]] of all.entries()) {
+      const [x, y] = dots[i];
+      if (z < 0.4) continue;
+      g.font = 'bold 10px "Space Mono", monospace'; const w = g.measureText(name).width;
+      for (const ly of [y - 10, y + 18]) if (fits(x, ly, w)) { boxes.push([x, ly, w]); label(name, x, ly, '#9ff5ec', 10); break; }
+    }
+  }
   { const [x, y] = pin(20, 12, '#b3262a', 'T', 10); label('TEXTURE COFFEE', x, y + 24, '#ffcf3a', 12); }
   // player
   { const [x, y] = toS(P.pos.x, P.pos.z), h = P.onBike ? bike.heading : P.heading, sh = Math.sin(h), ch = Math.cos(h);
@@ -2304,14 +2409,14 @@ $('btnPlay').onclick = () => {
   const [gx, gz, gh] = homePos(); P.pos.set(gx, 0, gz); P.heading = gh; cam.yaw = gh;
   playCutscene(() => playIntro(() => toast(markers.has('T1') ? 'Masuk ke penanda kuning (1) di depanmu untuk mulai misi pertama.' : 'Cari penanda kuning untuk misi berikutnya. OOT Wardrobe (W) ada di Texture Coffee.', 4500)));
 };
-/* ---------------- opening cutscene (follows the OOT "Garage Sale 11.11" video) ---------------- */
-// 1) OOT logo on black  2) sunset fly-in over Kediri down to Texture Coffee  3) low shot: the player walks up to
+/* ---------------- opening cutscene ---------------- */
+// 1) Texture logo on black  2) sunset fly-in over Kediri down to Texture Coffee  3) low shot: the player walks up to
 // Texture's front  4) title card. Then the normal dialogue intro. SKIP jumps straight to the dialogue.
 const CINE = { on: false, t: 0, shot: -1, done: null, from: null };
 const CINE_SHOTS = [
-  { len: 2.6, card: '<div class="ootOval">OOT</div><div class="cineSub">OUT OF TEX PRESENTS</div>' },
+  { len: 3.2, card: '<img class="texLogo" src="assets/texture_logo.gif" alt="Texture Coffee"><div class="cineSub">TEXTURE COFFEE PRESENT</div>' },
   { len: 5.0, cap: 'KEDIRI<small>SORE HARI · JAWA TIMUR</small>' },
-  { len: 5.2, cap: 'TEXTURE COFFEE<small>JL. DR. WAHIDIN · MARKAS OOT</small>' },
+  { len: 5.2, cap: 'TEXTURE COFFEE<small>JL. DR. WAHIDIN · KEDIRI</small>' },
   { len: 2.8, card: '<img src="assets/logo.png" alt="Grand Tex Avenue"><div class="cineSub">KEDIRI STORIES</div>' },
 ];
 const smooth = (x) => x * x * (3 - 2 * x);
@@ -2362,16 +2467,11 @@ $('cineSkip').onclick = (e) => { e.stopPropagation(); cineEnd(); };
 
 /* ---------------- intro (dialogue box, Harvest Moon-like pacing) ---------------- */
 // Shown every time the game starts; returning players can press SKIP INTRO.
-const INTRO_SPEAKER = 'Mas Tex';
+const INTRO_SPEAKER = 'Teksan Mahendra';
 const INTRO_LINES = [
-  'Halo, selamat datang di TEX CITY!',
-  'Kota ini luas lho. Ada Jalan Dhoho, area Stasiun, sampai Pakelan di sekitar Texture Coffee. Jelajahi semuanya pelan-pelan.',
-  'Cari penanda kuning. Itu tanda misi. Misinya berurutan, satu per satu, mulai dari perjalanan pertamamu di sini.',
-  'Setiap misi dan aktivitas memberi kamu Tex Coins. Kumpulkan sebanyak-banyaknya!',
-  'Nanti kamu juga akan ketemu pemain lain di kota ini. Sapa mereka pakai emote, ya.',
-  'Habis jajan di Texture Coffee? Setiap Rp15.000 dapat voucher fisik 10 Tex Coins. Redeem di TEX WALLET.',
-  'Texture Coffee itu markas kita. Di sana kamu bisa ganti outfit di OOT Wardrobe, dan HP kamu pulih penuh.',
-  'Hati-hati di jalan. Kalau ketabrak kendaraan, HP berkurang. Sekarang, ayo mulai jalan-jalan!',
+  'Halo, selamat datang di Tex City! Kamu baru saja tiba di Jalan Dhoho Kediri, sebuah kota yang penuh dengan cerita dan petualangan menarik. Bersiaplah untuk menjelajahi setiap sudut kota!',
+  'Petualanganmu baru saja dimulai! Selesaikan berbagai misi, kumpulkan Tex Coins, dan raih pencapaian untuk menjadi salah satu pemain terbaik di Tex City!',
+  'Jelajahi kota, kunjungi berbagai lokasi ikonik Kediri, berkendara, bertemu pemain lain, dan kustomisasi karaktermu dengan berbagai outfit serta merchandise eksklusif Texture Coffee dari OutOfTex. Sekarang, saatnya membuat ceritamu sendiri. Selamat bermain!',
 ];
 // say(lines, speaker, done): the same dialogue box for the intro and mission talk. Calls queue up.
 const DLG = { on: false, lines: [], i: 0, shown: 0, timer: 0, done: null, queue: [] };

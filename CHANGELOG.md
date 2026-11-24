@@ -3,6 +3,24 @@
 Grand Tex Avenue – Kediri Stories (TEX CITY). Versions follow `MAJOR.MINOR.PATCH`.
 The version lives in `VERSION`, `GAME_VERSION` in `main.js` and the `main.js?v=` tag in `index.html`.
 
+## [1.3.0] - 2026-11-24
+
+Client revision (REVISI GRAND TEX AVENUE).
+
+### Changed
+- Opening card shows the animated Texture logo with "TEXTURE COFFEE PRESENT" instead of OutOfTex.
+- Texture Coffee: two table sets left and right of the door, small trees instead of the Garage Sale items, brown box removed. Front repainted after the client photo: 2-storey light sandstone with the red emblem.
+- Welcome billboard: Texture logo on the left, "WELCOME TO TEX CITY" on the right, "Jelajahi kota, Temukan ceritamu sendiri" on the black bar.
+- The game starts at the Jl. Dhoho crossroads with the client's 3 intro slides; the guide is now Teksan Mahendra.
+- Map cut down to the client's play area: Jl. Dhoho crossroads (north), Sumur Bor crossroads (south), Stasiun Kediri (east), Warkop Sopo (west).
+- Tropis Coffee moved onto the corner of Jl. Dr. Setiabudi x Jl. Kyai Maja; Setiabudi 6AM fronts Jl. Dr. Setiabudi.
+
+### Added
+- Named location pins on the map and radar (Aries Motor, Stasiun Kediri, Grand Surya, SKDP, Tropis, Setiabudi, Astonish, Warkop Sopo, Gie Kie Kong Soe, Setono Gedong).
+- Name boards on the roofs of the named buildings.
+- Gie Kie Kong Soe temple front.
+- Brick gate with a MAKAM SETONO GEDONG sign across Jl. Makam Al Wasil.
+
 ## [1.2.0] - 2026-11-24
 
 ### Added
