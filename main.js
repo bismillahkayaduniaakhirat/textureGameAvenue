@@ -389,14 +389,14 @@ for (const id of ['masjid', 'klenteng', 'stasiun', 'mall', 'plaza']) {
   for (const b of BLD) { const d = Math.hypot(b.cx - l.x, b.cz - l.z); if (d < bd) { bd = d; best = b; } }
   if (best) { LM_BLD[id] = best; best.lmk = id; }
 }
-const LM_STYLE = { masjid: { wall: '#eeeae0', roof: '#2f7a4a', h: 9 }, klenteng: { wall: '#b3262a', roof: '#c8552a', h: 7 }, stasiun: { wall: '#e8dcc0', roof: '#9a4a2a', h: 7 }, mall: { wall: '#cfcac0', roof: '#77706a', h: 16 }, plaza: { wall: '#d8d4cc', roof: '#77706a', h: 14 } };
+const LM_STYLE = { masjid: { wall: '#eeeae0', roof: '#2f7a4a', h: 9 }, klenteng: { wall: '#b3262a', roof: '#c8552a', h: 7 }, stasiun: { wall: '#ecebe3', roof: '#5a524c', h: 5.5, hx: 5.5 }, mall: { wall: '#cfcac0', roof: '#77706a', h: 16 }, plaza: { wall: '#d8d4cc', roof: '#77706a', h: 14 } };
 // client-named buildings (brief): the OSM footprint under each Google Maps pin gets its own colours,
 // a painted facade on the side that faces the road and a name board. Everything else stays a plain house/ruko.
 const NAMED = [
   { id: 'aries', name: 'ARIES MOTOR', ll: [-7.8156213, 112.0135838], kind: 'showroom', wall: '#e9eef2', roof: '#8a8f96', accent: '#c8102e', fg: '#fff', h: 9 },
   { id: 'skdp', name: 'SKDP.', ll: [-7.8178821, 112.0128239], kind: 'cafe', wall: '#2e2c2a', roof: '#3a3634', accent: '#f2e8d2', fg: '#1a1a1a', h: 8 },
   { id: 'surya', name: 'GRAND SURYA', ll: [-7.817707, 112.0132129], kind: 'hotel', street: 'Jalan Dhoho', wall: '#e2e0da', roof: '#9a978f', accent: '#8a1f1f', fg: '#ffd86a', h: 9, hx: 9 },
-  { id: 'tropis', name: 'TROPIS COFFEE', ll: [-7.8190061, 112.0106658], kind: 'cafe', wall: '#2f6a3e', roof: '#3a4a32', accent: '#ffd86a', fg: '#1d3a22', h: 6 },
+  { id: 'tropis', name: 'TROPIS COFFEE', ll: [-7.8190061, 112.0106658], kind: 'cafe', wall: '#a9a69c', roof: '#9c5a3c', accent: '#ffd86a', fg: '#1d3a22', h: 3.6, hx: 3.6 },
   { id: 'setiabudi', name: 'SETIABUDI 6AM', ll: [-7.8187911, 112.0107452], kind: 'cafe', wall: '#f0ece2', roof: '#6a625c', accent: '#1f3a5a', fg: '#fff', h: 6 },
   { id: 'astonish', name: 'ASTONISH', ll: [-7.8199108, 112.0106423], kind: 'cafe', wall: '#222', roof: '#3a3634', accent: '#e9c46a', fg: '#1a1a1a', h: 6 },
   { id: 'sopo', name: 'WARKOP SOPO 1970', ll: [-7.8178701, 112.0100124], kind: 'warkop', wall: '#8a5a32', roof: '#7a3e28', accent: '#f6d36b', fg: '#3a1e0e', h: 5 },
@@ -683,13 +683,10 @@ const FACADE = {
   // low cafe in an old house: terracotta roof, green trim, cement wall, open door, green window, stone pier
   tropis(p) {
     const { L, h, R, speck, T, fit } = p;
-    const rt = Math.min(1.8, h * 0.3); // roof height
-    R(0, 0, L, h, '#a9a69c'); speck(0, 0, L, h - rt, ['#9a978d', '#b6b3a9', '#8e8b82'], 300);
-    for (let i = 0; i < 8; i++) R(Math.random() * L, 1 + Math.random() * (h - rt - 2), 0.5 + Math.random(), 0.8 + Math.random() * 1.2, 'rgba(70,64,54,.18)'); // stains
-    // roof tiles
-    R(0, h - rt, L, rt, '#9c5a3c');
-    for (let y = h - rt; y < h; y += 0.22) { R(0, y, L, 0.05, '#6e3a26'); for (let x = (y * 7) % 0.4; x < L; x += 0.4) R(x, y, 0.04, 0.22, '#b26a48'); }
-    R(0, h - rt - 0.25, L, 0.25, '#2f6a3e'); // green fascia
+    const rt = 0; // the tiled roof is 3D (buildFrontProps)
+    R(0, 0, L, h, '#a9a69c'); speck(0, 0, L, h, ['#9a978d', '#b6b3a9', '#8e8b82'], 300);
+    for (let i = 0; i < 8; i++) R(Math.random() * L, 1 + Math.random() * (h - 2), 0.5 + Math.random(), 0.8 + Math.random() * 1.2, 'rgba(70,64,54,.18)'); // stains
+    R(0, h - 0.5, L, 0.25, 'rgba(60,54,46,.35)'); // shadow under the eave
     for (const x of bays(L, 9)) {
       // left window with menu board
       R(x + 0.4, 1.0, 2.0, 1.4, '#2b2a28'); R(x + 0.5, 1.1, 1.8, 1.2, '#3e3a32'); R(x + 0.4, 2.4, 2.0, 0.12, '#2f6a3e');
@@ -708,16 +705,10 @@ const FACADE = {
   // colonial station hall: white walls, red dado, arched doors with fanlights, corrugated roof, KEDIRI on the gable
   stasiun(p) {
     const { L, h, R, speck, T, fit, g, sx, sy, Y } = p;
-    const rt = Math.min(2.4, h * 0.3);
-    R(0, 0, L, h, '#ecebe3'); speck(0, 0, L, h - rt, ['#e0dfd6', '#f4f3ec'], 200);
+    const rt = 0; // gable roof + porch are 3D (buildFrontProps)
+    R(0, 0, L, h, '#ecebe3'); speck(0, 0, L, h, ['#e0dfd6', '#f4f3ec'], 200);
     R(0, 0, L, 1.1, '#a5332c'); R(0, 1.1, L, 0.08, '#7a2420');
-    // corrugated roof + central gable
-    R(0, h - rt, L, rt, '#5a524c'); for (let x = 0; x < L; x += 0.2) R(x, h - rt, 0.06, rt, '#463f3a');
-    const gx = L / 2, gw = Math.min(L * 0.5, 10);
-    g.fillStyle = '#e6e4da'; g.beginPath(); g.moveTo((gx - gw / 2) * sx, Y(h - rt)); g.lineTo(gx * sx, Y(h)); g.lineTo((gx + gw / 2) * sx, Y(h - rt)); g.fill();
-    g.strokeStyle = '#4a433e'; g.lineWidth = 3; g.stroke();
-    fit('KEDIRI', gx, h - rt * 0.62, rt * 0.36, gw * 0.5, '#2a2a2a', 'Georgia, serif');
-    R(0, h - rt - 0.3, L, 0.3, '#d6d3c8'); // cornice
+    R(0, h - 0.3, L, 0.3, '#d6d3c8'); // cornice
     // arched bays
     for (const x of bays(L, 4)) {
       const cx = x + 2, dw = 1.6, top = Math.min(h - rt - 1.4, 2.8);
@@ -779,6 +770,55 @@ function facadeTex(nb, L, h) {
     board(gh + 0.15, 1.1);
     if (nb.kind === 'hotel') board(h - 2.2, 1.9);
   });
+}
+// 3D roofs + street furniture for Tropis (tiled roof, stone pier, stools) and Stasiun Kediri (corrugated gable
+// with KEDIRI on the fascia, porch roof, woven planters). Same local frame as buildSurya.
+function buildFrontProps(nb, f) {
+  const g = new THREE.Group(); g.position.set(f.mx, 0, f.mz); g.rotation.y = Math.atan2(f.nx, f.nz); scene.add(g);
+  const bx = (w, h, d, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); g.add(m); return m; };
+  const world = (x, z) => [f.mx + f.nz * x + f.nx * z, f.mz - f.nx * x + f.nz * z];
+  const solid = (x, z, w, d) => { const [wx, wz] = world(x, z), r = Math.max(w, d) / 2; addSolid(wx - r, wx + r, wz - r, wz + r); };
+  const L = f.L, H = nb.b.hh;
+  if (nb.id === 'tropis') {
+    const tileTex = canvasTex(32, 32, (c, W, Hh) => { c.fillStyle = '#9c5a3c'; c.fillRect(0, 0, W, Hh); for (let y = 0; y < Hh; y += 6) { c.fillStyle = '#6e3a26'; c.fillRect(0, y, W, 1); for (let x = (y / 6) % 2 ? 0 : 4; x < W; x += 8) { c.fillStyle = '#b26a48'; c.fillRect(x, y + 1, 1, 5); } } });
+    tileTex.wrapS = tileTex.wrapT = THREE.RepeatWrapping; tileTex.repeat.set(Math.max(2, L / 1.5), 3);
+    const tile = lam({ map: tileTex, side: THREE.DoubleSide });
+    const depth = 7, rise = 2.0, over = 1.3, run = depth / 2 + over, sl = Math.hypot(run, rise); // front slope: eave over the terrace up to the ridge
+    const slope = new THREE.Mesh(new THREE.PlaneGeometry(L + 0.8, sl), tile);
+    slope.position.set(0, H + rise / 2, over - run / 2); slope.rotation.x = -Math.atan2(run, rise); g.add(slope);
+    bx(L + 0.8, 0.3, 0.08, lam({ color: '#2f6a3e' }), 0, H - 0.05, over); // green fascia board
+    bx(L + 0.8, 0.14, 0.3, lam({ color: '#6e3a26' }), 0, H + rise, over - run); // ridge
+    const stoneM = lam({ map: canvasTex(16, 48, (c, W, Hh) => { c.fillStyle = '#55544e'; c.fillRect(0, 0, W, Hh); for (let i = 0; i < 60; i++) { c.fillStyle = ['#77756c', '#3e3d38', '#8a877d'][i % 3]; c.fillRect(Math.random() * W, Math.random() * Hh, 3, 2); } }) });
+    bx(0.9, H, 0.9, stoneM, L / 2 - 0.2, H / 2, 0.4); solid(L / 2 - 0.2, 0.4, 0.9, 0.9);
+    const wood = lam({ color: '#d9b47a' }), legs = lam({ color: '#a8824c' });
+    for (const [x, z, s] of [[L * 0.12, 1.8, 0.75], [L * 0.28, 2.0, 0.6], [-L * 0.32, 1.6, 0.55]]) { bx(s, 0.08, s, wood, x, s * 0.95, z); for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) bx(0.06, s * 0.95, 0.06, legs, x + a * s * 0.38, s * 0.47, z + b * s * 0.38); }
+    bx(1.0, 0.06, 0.5, lam({ color: '#2f7a3e' }), -L * 0.05, 0.75, 1.5); bx(0.06, 0.75, 0.06, lam({ color: '#2f7a3e' }), -L * 0.05, 0.37, 1.5); // green table
+    bx(2.4, 0.4, 0.5, lam({ color: '#8a7a64' }), -L * 0.32, 0.2, 0.5); // bench along the wall
+  }
+  if (nb.id === 'stasiun') {
+    const corrTex = canvasTex(32, 32, (c, W, Hh) => { c.fillStyle = '#5c5550'; c.fillRect(0, 0, W, Hh); for (let x = 0; x < W; x += 4) { c.fillStyle = '#463f3a'; c.fillRect(x, 0, 2, Hh); } });
+    corrTex.wrapS = corrTex.wrapT = THREE.RepeatWrapping; corrTex.repeat.set(4, 4);
+    const corr = lam({ map: corrTex, side: THREE.DoubleSide }), white = lam({ color: '#eceae2' }), trim = lam({ color: '#4a433e' });
+    const gw = Math.min(L + 1.2, 16), rise = 3.4, D = 10, z0 = 0.6;
+    // gable roof: ridge runs back from the facade, white front triangle carries the KEDIRI board
+    const sh = new THREE.Shape(); sh.moveTo(-gw / 2, 0); sh.lineTo(gw / 2, 0); sh.lineTo(0, rise); sh.closePath();
+    const roof = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: D, bevelEnabled: false }), [white, corr]); roof.position.set(0, H, z0 - D); g.add(roof);
+    const fas = new THREE.Mesh(new THREE.PlaneGeometry(gw * 0.5, 0.9), new THREE.MeshBasicMaterial({ map: canvasTex(128, 24, (c, W, Hh) => { c.fillStyle = '#efede6'; c.fillRect(0, 0, W, Hh); c.fillStyle = '#2a2a2a'; c.font = 'bold 18px Georgia, serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('KEDIRI', W / 2, Hh / 2 + 1); }, false) }));
+    fas.position.set(0, H + 1.0, z0 + 0.02); g.add(fas);
+    const ang = Math.atan2(rise, gw / 2), hyp = Math.hypot(rise, gw / 2);
+    for (const sgn of [-1, 1]) { const b = bx(hyp + 0.4, 0.22, 0.25, trim, sgn * gw / 4, H + rise / 2, z0 + 0.06); b.rotation.z = -sgn * ang; } // barge boards
+    // porch roof along the whole front, on thin brackets
+    const porch = bx(L + 1, 0.12, 2.0, corr, 0, H - 1.3, 1.0); porch.rotation.x = 0.18;
+    for (const x of [-L * 0.4, 0, L * 0.4]) { const br = bx(0.08, 0.08, 2.2, trim, x, H - 1.7, 0.9); br.rotation.x = -0.5; }
+    bx(0.4, 0.4, 0.2, lam({ color: '#fff4c0', emissive: '#ffe08a' }), 0, H - 1.9, 0.15); // lamp
+    // woven yellow planters with palms
+    const weave = lam({ map: canvasTex(16, 16, (c, W, Hh) => { c.fillStyle = '#d6a23a'; c.fillRect(0, 0, W, Hh); c.fillStyle = '#a87a22'; for (let y = 0; y < Hh; y += 4) for (let x = (y / 4) % 2 ? 0 : 2; x < W; x += 4) c.fillRect(x, y, 2, 2); }) });
+    const leaf = lam({ color: '#4a8a3a' });
+    for (const x of [-2.4, 0, 2.4]) {
+      const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.42, 0.9, 10), weave); pot.position.set(x, 0.45, 5); g.add(pot); solid(x, 5, 1.1, 1.1);
+      for (let i = 0; i < 6; i++) { const fr = bx(0.12, 1.8, 0.12, leaf, x, 1.7, 5); fr.rotation.set(Math.cos(i) * 0.5, 0, Math.sin(i * 1.7) * 0.5); }
+    }
+  }
 }
 // Grand Surya: low podium (OSM footprint) + white tower set back on the left with the sun crown and spire,
 // flat dark canopy on slim columns, stone chimney, red container entrance, black wedge planter and the
@@ -849,6 +889,7 @@ for (const nb of NAMED) {
   f.position.set(best.mx + best.nx * 0.06, h / 2, best.mz + best.nz * 0.06); f.rotation.y = Math.atan2(best.nx, best.nz); scene.add(f);
   nb.front = best;
   const extra = nb.id === 'surya' ? buildSurya(nb, best) : null;
+  if (nb.id === 'tropis' || nb.id === 'stasiun') buildFrontProps(nb, best);
   if (nb.kind !== 'station') label3D(nb.name, b.cx, extra ? extra.tower + 3 : h + 4, b.cz, nb.accent, nb.fg, 0.8);
   if (nb.kind === 'hotel' && !extra) { // rooftop billboard
     const grey = lam({ color: '#333' }), face = textSign(nb.name, nb.accent, nb.fg, 256, 56, 34);
@@ -1287,7 +1328,10 @@ function ensureBillboard() {
   box(SW + 0.9, SH + 0.9, 0.7, red, sx, SY + SH / 2, 0, g); // red frame / cabinet
   box(SW + 0.6, 0.25, 0.9, dark, sx, SY + SH + 0.55, 0, g);  // top service walkway
   for (const k of [0.25, 0.75]) box(0.12, 0.12, 0.9, steel, s * (COL / 2 + 0.25 + SW * k), SY - 0.05, 0, g);
-  { const st = new THREE.Mesh(new THREE.BoxGeometry(0.28, 7.2, 0.28), steel); st.position.set(s * (COL / 2 + 2.3), SY - 2.4, 0.2); st.rotation.z = s * 0.62; g.add(st); } // diagonal strut
+  { // diagonal strut: from the column up and out to the underside of the screen (stays above the traffic)
+    const x0 = s * (COL / 2), y0 = SY - 3.2, x1 = s * (COL / 2 + 4.2), y1 = SY - 0.1, len = Math.hypot(x1 - x0, y1 - y0);
+    const st = new THREE.Mesh(new THREE.BoxGeometry(0.26, len, 0.26), steel); st.position.set((x0 + x1) / 2, (y0 + y1) / 2, 0); st.rotation.z = -Math.atan2(x1 - x0, y1 - y0); g.add(st);
+  }
   { const arm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 4.4), steel); arm.position.set(-s * 0.2, 13.2, 2.4 + COL / 2); g.add(arm); box(0.5, 0.22, 0.9, lam({ color: '#e8e6dc', emissive: '#6a6450' }), -s * 0.2, 13.05, 4.5 + COL / 2, g); } // street lamp arm
   const face = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), new THREE.MeshBasicMaterial({ map: canvasTex(480, 264, (c, W, H) => {
     const body = H - 46;
