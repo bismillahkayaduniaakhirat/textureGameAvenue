@@ -1518,7 +1518,10 @@ const VEH = { bike: { acc: 15, brake: 26, max: 24, rev: -6, turn: 2.1, r: 0.9 },
 let bike = addBike(33, 6.5, Math.PI / 2, '#e9e6e0'); // the white one next to Texture Coffee
 MAP.bikes.forEach(([x, z, h], i) => addBike(x, z, h, ['#b3262a', '#2a2a2a', '#3c5a8a', '#d8b04a', '#e9e6e0', '#4a7a4a'][i % 6]));
 // parked city EVs: one in front of Texture Coffee, the rest around town (x, z, heading, colour)
-const EV_SPOTS = [[38, 9.5, Math.PI / 2, '#a3141b']];
+const EV_SPOTS = [[38, 9.5, Math.PI / 2, '#a3141b'],
+  [312, -355.5, -3.1, '#e9e6e0'],   // Stasiun Kediri forecourt
+  [108.1, -486.2, -0.12, '#8fbcd8'], // Aries Motor, Jl. Dhoho
+  [-131.2, -79.2, -0.02, '#c7d98a']]; // Setiabudi 6AM / Tropis corner
 for (const [x, z, h, col] of EV_SPOTS) addBike(x, z, h, col, true);
 
 /* ---------------- NPC pedestrians ---------------- */
