@@ -212,7 +212,6 @@ T.shoe = canvasTex(8, 8, (g) => { for (let y = 0; y < 8; y += 2) for (let x = 0;
 T.shirt = canvasTex(16, 16, (g, w, h) => { g.fillStyle = '#e9e7e2'; g.fillRect(0, 0, w, h); noise(g, w, h, 22, 2); });
 T.shorts = canvasTex(16, 16, (g, w, h) => { g.fillStyle = '#d4d6d8'; g.fillRect(0, 0, w, h); noise(g, w, h, 30, 2); g.fillStyle = '#9aa0a8'; g.fillRect(7, 0, 1, 16); });
 T.jersey = imgTex('assets/jersey_tex.jpg');
-T.crate = imgTex('assets/crate.jpg');
 T.coin = canvasTex(32, 32, (g) => { g.fillStyle = '#ffcf3a'; g.fillRect(0, 0, 32, 32); g.fillStyle = '#c98a12'; g.font = 'bold 13px monospace'; g.textAlign = 'center'; g.fillText('OOT', 16, 21); });
 
 const SHOP_NAMES = ['TAHU TAKWA', 'GETUK PISANG', 'PECEL TUMPANG', 'TOKO EMAS', 'TOKO SEPATU', 'BATIK KEDIRI', 'PONSEL JAYA', 'OPTIK', 'TOKO KAIN', 'APOTEK', 'SATE BEKICOT', 'NASI PECEL', 'BENGKEL', 'FOTOKOPI'];
@@ -501,8 +500,6 @@ function buildCafe() {
     warm(158, 92, 68, 52); warm(40, 96, 70, 34); warm(276, 96, 70, 34);
     // sign
     g.fillStyle = '#2b1c12'; g.fillRect(150, 80, 84, 11); g.fillStyle = '#f2e8d2'; g.font = 'bold 10px monospace'; g.textAlign = 'center'; g.fillText('TEXTURE COFFEE', 192, 89);
-    // garage sale poster
-    g.fillStyle = '#2a3c8a'; g.fillRect(240, 96, 22, 32); g.fillStyle = '#ffcf3a'; g.fillRect(242, 100, 18, 6); g.fillStyle = '#e23b3b'; g.fillRect(242, 108, 18, 10); g.fillStyle = '#fff'; g.fillRect(244, 120, 14, 5);
   });
   const sideTex = canvasTex(64, 64, (g, W, H) => { g.fillStyle = '#c4ad8c'; g.fillRect(0, 0, W, H); noise(g, W, H, 40, 3); });
   const sideM = lam({ map: sideTex });
@@ -516,28 +513,27 @@ function buildCafe() {
   const aw = new THREE.Mesh(new THREE.BoxGeometry(w + 1, 0.15, 2.6), lam({ color: '#5a4636' })); aw.position.set(20, 4.3, z0 - 1.2); aw.rotation.x = 0.16; scene.add(aw);
   // warm glow from door
   const glow = new THREE.PointLight('#ffa040', 6, 12, 1.5); glow.position.set(20, 2, z0 - 1.5); scene.add(glow);
-  // crates, stools, cones
-  const crateMat = lam({ color: '#c22a22' });
-  const crate = (cx, cz, y = 0.25) => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.7, 0.9), crateMat); m.position.set(cx, y + 0.35, cz); scene.add(m); };
-  crate(9.5, 9.2); crate(9.5, 9.2, 0.95); crate(10.6, 9.2); crate(29.5, 9.2); crate(30.6, 9.2); crate(30.6, 9.2, 0.95);
-  addSolid(9, 11.1, 8.7, 9.7); addSolid(29, 31.1, 8.7, 9.7);
-  const stoolMat = lam({ color: '#e8e4dc' });
-  const stool = (sx, sz) => { const s = new THREE.Group(); const top = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.08, 0.6), stoolMat); top.position.y = 0.7; s.add(top); for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const l = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.7, 0.07), stoolMat); l.position.set(a * 0.24, 0.35, b * 0.24); l.rotation.z = a * 0.06; s.add(l); } s.position.set(sx, 0.25, sz); scene.add(s); };
-  stool(12.5, 8.6); stool(14, 9); stool(26.5, 8.8); stool(27.8, 8.5);
+  // terrace: 2 table sets left of the door and 2 right, all on one line along the facade
+  const tableMat = lam({ color: '#7a4e2c' }), chairMat = lam({ color: '#e8e4dc' });
+  const tableSet = (cx, cz) => {
+    const s = new THREE.Group();
+    const top = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, 0.9), tableMat); top.position.y = 0.75; s.add(top);
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.72, 0.12), tableMat); leg.position.y = 0.36; s.add(leg);
+    for (const a of [-1, 1]) { // a chair on each side, backrest away from the table
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.07, 0.5), chairMat); seat.position.set(a * 0.85, 0.46, 0); s.add(seat);
+      const back = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.5, 0.5), chairMat); back.position.set(a * 1.08, 0.72, 0); s.add(back);
+      for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const l = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.44, 0.06), chairMat); l.position.set(a * 0.85 + dx * 0.2, 0.22, dz * 0.2); s.add(l); }
+    }
+    s.position.set(cx, 0.25, cz); scene.add(s);
+    addSolid(cx - 1.15, cx + 1.15, cz - 0.4, cz + 0.4);
+  };
+  for (const tx of [10.8, 14.0, 26.0, 29.2]) tableSet(tx, 8.5);
   const cone = (cx, cz) => { const c = new THREE.Group(); const a = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.8, 6), lam({ color: '#ff6a1a' })); a.position.y = 0.4; c.add(a); const b = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.2, 0.12, 6), lam({ color: '#fff' })); b.position.y = 0.5; c.add(b); c.position.set(cx, groundY(cx, cz), cz); scene.add(c); };
   cone(14, 3.6); cone(26, 3.6);
-  // OOT sign pole
-  const pole = new THREE.Mesh(new THREE.BoxGeometry(0.15, 4, 0.15), lam({ color: '#555' })); pole.position.set(6.2, 2.25, 6.5); scene.add(pole);
-  const signTex = canvasTex(64, 80, (g) => { g.fillStyle = '#f2e8d2'; g.fillRect(0, 0, 64, 80); g.strokeStyle = '#b3262a'; g.lineWidth = 5; g.beginPath(); g.ellipse(32, 34, 24, 18, 0, 0, Math.PI * 2); g.stroke(); g.fillStyle = '#b3262a'; g.font = 'bold 18px monospace'; g.textAlign = 'center'; g.fillText('OOT', 32, 41); g.font = 'bold 9px monospace'; g.fillText('GARAGE', 32, 66); g.fillText('SALE 11.11', 32, 76); });
-  const sign = new THREE.Mesh(new THREE.BoxGeometry(1.6, 2, 0.12), [lam({ color: '#ddd' }), lam({ color: '#ddd' }), lam({ color: '#ddd' }), lam({ color: '#ddd' }), lam({ map: signTex }), lam({ map: signTex })]);
-  sign.position.set(6.2, 3.4, 6.4); scene.add(sign);
-  addSolid(6, 6.4, 6.3, 6.7);
+  // small trees at the corner of the lot
+  tree(6.4, 6.4, 0.55); tree(6.6, 8.9, 0.45);
   // corrugated fence on left
   const fence = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.6, 16), lam({ color: '#6b4a32' })); fence.position.set(6, 1.55, 19); scene.add(fence);
-  // garage sale crate (merch) with real crate art on top
-  const wood = lam({ color: '#a8803e' });
-  const gcrate = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.8, 1.4), [wood, wood, lam({ map: T.crate }), wood, wood, wood]);
-  gcrate.position.set(23.5, 0.65, 8.9); scene.add(gcrate); addSolid(22.8, 24.2, 8.2, 9.6);
 }
 { // the café lot: raised pavement slab + the café itself
   const L = CAFE_LOT, w = L.x1 - L.x0, d = L.z1 - L.z0;
@@ -1391,23 +1387,22 @@ function ensureBillboard() {
     const st = new THREE.Mesh(new THREE.BoxGeometry(0.26, len, 0.26), steel); st.position.set((x0 + x1) / 2, (y0 + y1) / 2, 0); st.rotation.z = -Math.atan2(x1 - x0, y1 - y0); g.add(st);
   }
   { const arm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 4.4), steel); arm.position.set(-s * 0.2, 13.2, 2.4 + COL / 2); g.add(arm); box(0.5, 0.22, 0.9, lam({ color: '#e8e6dc', emissive: '#6a6450' }), -s * 0.2, 13.05, 4.5 + COL / 2, g); } // street lamp arm
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), new THREE.MeshBasicMaterial({ map: canvasTex(480, 264, (c, W, H) => {
+  const LOGO = { x: 22, y: 22, s: 174 }; // Texture logo panel on the left of the screen
+  const scan = (c, x, y, w, h) => { c.fillStyle = 'rgba(0,0,0,.18)'; for (let yy = y; yy < y + h; yy += 3) c.fillRect(x, yy, w, 1); }; // LED scanlines
+  const faceTex = canvasTex(480, 264, (c, W, H) => {
     const body = H - 46;
     const gr = c.createLinearGradient(0, 0, W, body); gr.addColorStop(0, '#3a2414'); gr.addColorStop(0.55, '#7a4a22'); gr.addColorStop(1, '#2a1a10'); c.fillStyle = gr; c.fillRect(0, 0, W, body);
     c.fillStyle = 'rgba(255,214,140,.10)'; for (let i = 0; i < 7; i++) c.fillRect(30 + i * 64, 0, 26, body); // café interior light bands
-    c.fillStyle = '#f2e8d2'; c.fillRect(46, 64, 74, 92); c.fillStyle = '#6a3a1a'; c.fillRect(54, 72, 58, 20); // big cup
-    c.strokeStyle = '#f2e8d2'; c.lineWidth = 9; c.beginPath(); c.arc(124, 108, 20, -1.3, 1.3); c.stroke();
-    c.fillStyle = '#d9cfb8'; c.fillRect(30, 158, 106, 10);
-    c.strokeStyle = 'rgba(242,232,210,.6)'; c.lineWidth = 4; for (const dx of [62, 82, 102]) { c.beginPath(); c.moveTo(dx, 56); c.quadraticCurveTo(dx + 10, 40, dx, 24); c.stroke(); }
-    c.textAlign = 'left'; c.fillStyle = '#f2e8d2'; c.font = 'bold 22px monospace'; c.fillText('WELCOME TO', 170, 70);
-    c.fillStyle = '#ffcf3a'; c.font = 'bold 62px monospace'; c.fillText('TEX CITY', 166, 130);
-    c.fillStyle = '#f2e8d2'; c.font = 'bold 18px monospace'; c.fillText('KEDIRI STORIES', 172, 162);
-    c.fillStyle = '#c41e24'; c.fillRect(172, 176, 220, 4);
+    c.fillStyle = '#f2e8d2'; c.fillRect(LOGO.x, LOGO.y, LOGO.s, LOGO.s); // cream panel; the logo is drawn on it once loaded
+    c.textAlign = 'center'; c.fillStyle = '#f2e8d2'; c.font = 'bold 26px monospace'; c.fillText('WELCOME TO', 334, 88);
+    c.fillStyle = '#ffcf3a'; c.font = 'bold 50px monospace'; c.fillText('TEX CITY', 334, 142);
+    c.fillStyle = '#c41e24'; c.fillRect(224, 160, 220, 4);
     c.fillStyle = '#0c0c0c'; c.fillRect(0, body, W, H - body);
-    c.fillStyle = '#ffcf3a'; c.font = 'bold 14px monospace'; c.fillText('INFO KOTA', 12, body + 18);
-    c.fillStyle = '#e8e8e8'; c.font = '12px monospace'; c.fillText('NGOPI DULU DI TEXTURE COFFEE · JL. DR. WAHIDIN', 12, body + 36);
-    c.fillStyle = 'rgba(0,0,0,.18)'; for (let y = 0; y < H; y += 3) c.fillRect(0, y, W, 1); // LED scanlines
-  }, false) }));
+    c.fillStyle = '#ffcf3a'; c.font = 'bold 19px monospace'; c.fillText('Jelajahi kota, Temukan ceritamu sendiri', W / 2, body + 29);
+    scan(c, 0, 0, W, H);
+  }, false);
+  { const img = new Image(); img.onload = () => { const c = faceTex.image.getContext('2d'); c.drawImage(img, LOGO.x + 4, LOGO.y + 4, LOGO.s - 8, LOGO.s - 8); scan(c, LOGO.x, LOGO.y, LOGO.s, LOGO.s); faceTex.needsUpdate = true; }; img.src = 'assets/texture_logo.png'; }
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), new THREE.MeshBasicMaterial({ map: faceTex }));
   face.position.set(sx, SY + SH / 2, 0.36); g.add(face);
   const back = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), dark); back.position.set(sx, SY + SH / 2, -0.36); back.rotation.y = Math.PI; g.add(back);
   const px = x + ux * 1.4, pz = z + uz * 1.4;
@@ -1456,7 +1451,7 @@ function explorerSpots() {
   return s;
 }
 const MDEF = {
-  T1: { name: 'Arrival in Tex City', desc: 'Perjalanan pertamamu. Ikuti checkpoint di Jalan Dhoho sampai billboard selamat datang.', at: () => [CAFE.x + 3, 1.8],
+  T1: { name: 'Arrival in Tex City', desc: 'Perjalanan pertamamu. Ikuti checkpoint di Jalan Dhoho sampai billboard selamat datang.', at: () => gatePos(),
     stages: () => [
       [tgt(dhoho(0.05), { label: 'checkpoint 1', toast: 'Checkpoint 1! Lanjut ke utara.' })],
       [tgt(dhoho(0.3), { label: 'checkpoint 2', say: ['Mantap! Tahan Shift (atau tombol LARI) buat lari.', 'Lihat motor di pinggir jalan? Dekati lalu tekan F atau tombol MOTOR buat naik.'] })],
@@ -1671,7 +1666,7 @@ let promptFor = null;   // mission id being offered
 let suppress = null;    // marker you declined (until you step away)
 let carryBox = null;
 function setCarry(on) {
-  if (on && !carryBox) { carryBox = box(0.5, 0.38, 0.38, cm({ map: T.crate }), 0, 1.15, 0.38, player.group); player.parts.carry = carryBox; }
+  if (on && !carryBox) { carryBox = box(0.5, 0.38, 0.38, cm({ color: '#b08a5a' }), 0, 1.15, 0.38, player.group); player.parts.carry = carryBox; }
   if (!on && carryBox) { player.group.remove(carryBox); carryBox = null; delete player.parts.carry; }
 }
 function missionPrompt(id) {
@@ -1720,7 +1715,7 @@ function reachTarget(t) {
   if (t.toast) toast(t.toast);
   stageInfo();
   const after = () => { if (active === a && a.stages[a.si].every((q) => q.done)) nextStage(); };
-  if (t.say) say(t.say, 'Mas Tex', after); else after();
+  if (t.say) say(t.say, INTRO_SPEAKER, after); else after();
 }
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 async function finishMission() {
@@ -1976,8 +1971,8 @@ function respawn() {
   cam.yaw = gh; P.lastHit = clock.elapsedTime; updateHUD(); toast('HP penuh lagi. Hati-hati di jalan!');
 }
 $('btnRespawn').onclick = respawn;
-// Start / respawn point: Texture Coffee's front door, facing the street (the opening video ends here too)
-const homePos = () => [CAFE.x + 3, 4.2, Math.PI]; // beside the partner pin (20, 5.8), so its card does not pop up at spawn
+// Start / respawn point: the Jl. Dhoho intersection (the CFD gate below), facing north up the street
+const homePos = () => gatePos();
 // TEX CITY entrance: the CFD gate at the south end of Jl. Dhoho (kerb next to the road, facing north up the street)
 let GATE = null;
 function gatePos() {
@@ -2304,14 +2299,14 @@ $('btnPlay').onclick = () => {
   const [gx, gz, gh] = homePos(); P.pos.set(gx, 0, gz); P.heading = gh; cam.yaw = gh;
   playCutscene(() => playIntro(() => toast(markers.has('T1') ? 'Masuk ke penanda kuning (1) di depanmu untuk mulai misi pertama.' : 'Cari penanda kuning untuk misi berikutnya. OOT Wardrobe (W) ada di Texture Coffee.', 4500)));
 };
-/* ---------------- opening cutscene (follows the OOT "Garage Sale 11.11" video) ---------------- */
-// 1) OOT logo on black  2) sunset fly-in over Kediri down to Texture Coffee  3) low shot: the player walks up to
+/* ---------------- opening cutscene ---------------- */
+// 1) Texture logo on black  2) sunset fly-in over Kediri down to Texture Coffee  3) low shot: the player walks up to
 // Texture's front  4) title card. Then the normal dialogue intro. SKIP jumps straight to the dialogue.
 const CINE = { on: false, t: 0, shot: -1, done: null, from: null };
 const CINE_SHOTS = [
-  { len: 2.6, card: '<div class="ootOval">OOT</div><div class="cineSub">OUT OF TEX PRESENTS</div>' },
+  { len: 3.2, card: '<img class="texLogo" src="assets/texture_logo.gif" alt="Texture Coffee"><div class="cineSub">TEXTURE COFFEE PRESENT</div>' },
   { len: 5.0, cap: 'KEDIRI<small>SORE HARI · JAWA TIMUR</small>' },
-  { len: 5.2, cap: 'TEXTURE COFFEE<small>JL. DR. WAHIDIN · MARKAS OOT</small>' },
+  { len: 5.2, cap: 'TEXTURE COFFEE<small>JL. DR. WAHIDIN · KEDIRI</small>' },
   { len: 2.8, card: '<img src="assets/logo.png" alt="Grand Tex Avenue"><div class="cineSub">KEDIRI STORIES</div>' },
 ];
 const smooth = (x) => x * x * (3 - 2 * x);
@@ -2362,16 +2357,11 @@ $('cineSkip').onclick = (e) => { e.stopPropagation(); cineEnd(); };
 
 /* ---------------- intro (dialogue box, Harvest Moon-like pacing) ---------------- */
 // Shown every time the game starts; returning players can press SKIP INTRO.
-const INTRO_SPEAKER = 'Mas Tex';
+const INTRO_SPEAKER = 'Teksan Mahendra';
 const INTRO_LINES = [
-  'Halo, selamat datang di TEX CITY!',
-  'Kota ini luas lho. Ada Jalan Dhoho, area Stasiun, sampai Pakelan di sekitar Texture Coffee. Jelajahi semuanya pelan-pelan.',
-  'Cari penanda kuning. Itu tanda misi. Misinya berurutan, satu per satu, mulai dari perjalanan pertamamu di sini.',
-  'Setiap misi dan aktivitas memberi kamu Tex Coins. Kumpulkan sebanyak-banyaknya!',
-  'Nanti kamu juga akan ketemu pemain lain di kota ini. Sapa mereka pakai emote, ya.',
-  'Habis jajan di Texture Coffee? Setiap Rp15.000 dapat voucher fisik 10 Tex Coins. Redeem di TEX WALLET.',
-  'Texture Coffee itu markas kita. Di sana kamu bisa ganti outfit di OOT Wardrobe, dan HP kamu pulih penuh.',
-  'Hati-hati di jalan. Kalau ketabrak kendaraan, HP berkurang. Sekarang, ayo mulai jalan-jalan!',
+  'Halo, selamat datang di Tex City! Kamu baru saja tiba di Jalan Dhoho Kediri, sebuah kota yang penuh dengan cerita dan petualangan menarik. Bersiaplah untuk menjelajahi setiap sudut kota!',
+  'Petualanganmu baru saja dimulai! Selesaikan berbagai misi, kumpulkan Tex Coins, dan raih pencapaian untuk menjadi salah satu pemain terbaik di Tex City!',
+  'Jelajahi kota, kunjungi berbagai lokasi ikonik Kediri, berkendara, bertemu pemain lain, dan kustomisasi karaktermu dengan berbagai outfit serta merchandise eksklusif Texture Coffee dari OutOfTex. Sekarang, saatnya membuat ceritamu sendiri. Selamat bermain!',
 ];
 // say(lines, speaker, done): the same dialogue box for the intro and mission talk. Calls queue up.
 const DLG = { on: false, lines: [], i: 0, shown: 0, timer: 0, done: null, queue: [] };
