@@ -243,7 +243,7 @@ body.touch #emotes{top:38%}
 @keyframes ovalIn{from{transform:scale(.6);opacity:0;filter:blur(6px)}to{transform:none;opacity:1;filter:none}}
 .cineSub{font-family:'Space Mono';font-size:11px;letter-spacing:3px;color:#ddd}
 #cineCard img{width:min(46vw,300px);animation:ovalIn 1s ease-out}
-#cineCard img.texLogo{width:min(34vw,190px);image-rendering:auto;background:#f2e8d2;border-radius:22px;padding:8px;box-shadow:0 0 30px rgba(255,120,90,.45)}
+#cineCard img.texLogo{width:min(46vw,240px);image-rendering:auto}
 #cineCap{position:absolute;left:max(18px,env(safe-area-inset-left));bottom:calc(11vh + 14px);font-family:'Bungee';font-size:clamp(16px,3vw,26px);color:#fff;text-shadow:3px 3px 0 #000;opacity:0;transition:opacity .6s}
 #cineCap small{display:block;font-family:'Space Mono';font-size:.5em;color:var(--gold);letter-spacing:2px}
 #cineCap.on{opacity:1}

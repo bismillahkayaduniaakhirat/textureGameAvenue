@@ -1876,7 +1876,7 @@ const POSTERS = [
 ];
 for (const po of POSTERS) { po.tex = texLoader.load(po.file); po.tex.colorSpace = THREE.SRGBColorSpace; po.mat = new THREE.MeshBasicMaterial({ map: po.tex }); }
 const blankPosterMat = lam({ map: canvasTex(32, 48, (g, w, h) => { g.fillStyle = '#d9cfb8'; g.fillRect(0, 0, w, h); noise(g, w, h, 25, 2); g.fillStyle = '#8a7a5a'; g.font = 'bold 6px monospace'; g.textAlign = 'center'; g.fillText('TEMPEL', w / 2, h / 2 - 2); g.fillText('DI SINI', w / 2, h / 2 + 6); }) });
-// [x, z, facing yaw] at real kerbsides around town, facing the road. Spot 0 = in front of Texture Coffee (always has a poster)
+// [x, z, facing yaw] at real kerbsides around town, facing the road. Spot 0 = in front of Texture Coffee (board removed, kept for save indices)
 const POSTER_SPOTS = MAP.posters;
 save.posters = save.posters || {};
 const woodMat = lam({ color: '#5a3b24' });
@@ -1893,10 +1893,11 @@ function makeBoard(x, z, yaw, i) {
   const face = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), blankPosterMat); face.position.set(0, 1.55, 0.005); g.add(face);
   g.position.set(x, y0, z); g.rotation.y = yaw; scene.add(g);
   const b = { g, face, x, z, nx: Math.sin(yaw), nz: Math.cos(yaw), poster: -1 };
-  setBoard(b, i === 0 ? 0 : (save.posters[i] ?? -1));
+  setBoard(b, i === 0 ? -1 : (save.posters[i] ?? -1));
   return b;
 }
 const boards = POSTER_SPOTS.map(([x, z, yaw], i) => makeBoard(x, z, yaw, i));
+if (boards[0]) boards[0].g.visible = false; // no poster board in front of Texture Coffee
 // three empty notice boards along Jl. Dhoho for mission T2 "Poster Drop"
 for (const t of [0.12, 0.45, 0.8]) {
   const [cx, cz] = dhohoLine(t), [kx, kz] = kerbFront(cx, cz);
@@ -2242,8 +2243,12 @@ function respawn() {
   cam.yaw = gh; P.lastHit = clock.elapsedTime; updateHUD(); toast('HP penuh lagi. Hati-hati di jalan!');
 }
 $('btnRespawn').onclick = respawn;
-// Start / respawn point: the Jl. Dhoho intersection (the CFD gate below), facing north up the street
-const homePos = () => gatePos();
+// Start / respawn point: the north crossroads of Jl. Dhoho (Brawijaya / Hayam Wuruk), on the kerb, facing south down Dhoho
+let HOME = null;
+function homePos() {
+  if (!HOME) { const [x, z] = kerbFront(125.4, -609.1); HOME = [x, z, Math.atan2(-20, 170)]; }
+  return HOME;
+}
 // TEX CITY entrance: the CFD gate at the south end of Jl. Dhoho (kerb next to the road, facing north up the street)
 let GATE = null;
 function gatePos() {
@@ -2590,10 +2595,10 @@ $('btnPlay').onclick = () => {
 // Texture's front  4) title card. Then the normal dialogue intro. SKIP jumps straight to the dialogue.
 const CINE = { on: false, t: 0, shot: -1, done: null, from: null };
 const CINE_SHOTS = [
-  { len: 3.2, card: '<img class="texLogo" src="assets/texture_logo.gif" alt="Texture Coffee"><div class="cineSub">TEXTURE COFFEE PRESENT</div>' },
+  { len: 4.0, card: '<img class="texLogo" src="assets/texture_logo_spin.webp" alt="Texture Coffee"><div class="cineSub">TEXTURE COFFEE PRESENT</div>' },
   { len: 5.0, cap: 'KEDIRI<small>SORE HARI · JAWA TIMUR</small>' },
   { len: 5.2, cap: 'TEXTURE COFFEE<small>JL. DR. WAHIDIN · KEDIRI</small>' },
-  { len: 2.8, card: '<img src="assets/logo.png" alt="Grand Tex Avenue"><div class="cineSub">KEDIRI STORIES</div>' },
+  { len: 2.8, card: '<img src="assets/logo_title.png" alt="Grand Tex Avenue">' },
 ];
 const smooth = (x) => x * x * (3 - 2 * x);
 const cineMarkers = (show) => { for (const o of scene.children) if (o.userData.marker) o.visible = show; playerMarker.visible = show; };
