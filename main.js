@@ -6,7 +6,7 @@ import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
    TEX CITY / Grand Tex Avenue - mini open-world web game (Kediri, sunset)
    Edit CONFIG below. Server values (Supabase game_settings) override it.
    ========================================================= */
-export const GAME_VERSION = '1.2.0'; // keep in step with VERSION and CHANGELOG.md
+export const GAME_VERSION = '1.3.0'; // keep in step with VERSION and CHANGELOG.md
 window.__ootVersion = GAME_VERSION;
 const CONFIG = {
   FNB_RATE: 10, MERCH_RATE: 10, COIN_UNIT_RP: 15000, // Tex Coins per Rp15.000 (server: fnb_rate / merch_rate / coin_unit_rp)
