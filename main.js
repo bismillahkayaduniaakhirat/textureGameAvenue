@@ -395,7 +395,7 @@ const LM_STYLE = { masjid: { wall: '#eeeae0', roof: '#2f7a4a', h: 9 }, klenteng:
 const NAMED = [
   { id: 'aries', name: 'ARIES MOTOR', ll: [-7.8156213, 112.0135838], kind: 'showroom', wall: '#e9eef2', roof: '#8a8f96', accent: '#c8102e', fg: '#fff', h: 9 },
   { id: 'skdp', name: 'SKDP.', ll: [-7.8178821, 112.0128239], kind: 'cafe', wall: '#2e2c2a', roof: '#3a3634', accent: '#f2e8d2', fg: '#1a1a1a', h: 8 },
-  { id: 'surya', name: 'GRAND SURYA', ll: [-7.817707, 112.0132129], kind: 'hotel', wall: '#efe6d2', roof: '#7a6a58', accent: '#8a1f1f', fg: '#ffd86a', h: 22 },
+  { id: 'surya', name: 'GRAND SURYA', ll: [-7.817707, 112.0132129], kind: 'hotel', street: 'Jalan Dhoho', wall: '#e2e0da', roof: '#9a978f', accent: '#8a1f1f', fg: '#ffd86a', h: 9, hx: 9 },
   { id: 'tropis', name: 'TROPIS COFFEE', ll: [-7.8190061, 112.0106658], kind: 'cafe', wall: '#2f6a3e', roof: '#3a4a32', accent: '#ffd86a', fg: '#1d3a22', h: 6 },
   { id: 'setiabudi', name: 'SETIABUDI 6AM', ll: [-7.8187911, 112.0107452], kind: 'cafe', wall: '#f0ece2', roof: '#6a625c', accent: '#1f3a5a', fg: '#fff', h: 6 },
   { id: 'astonish', name: 'ASTONISH', ll: [-7.8199108, 112.0106423], kind: 'cafe', wall: '#222', roof: '#3a3634', accent: '#e9c46a', fg: '#1a1a1a', h: 6 },
@@ -447,7 +447,7 @@ BLD.forEach((b, bi) => { // plain footprint over a street centre line: leave it 
     if (b.cut) continue;
     const p = b.p, n = p.length / 2, st = LM_STYLE[b.lmk] || b.nm;
     const r1 = ((hseed = (hseed * 9301 + 49297) % 233280) / 233280);
-    const h = st ? Math.max(b.h, st.h) : b.h; b.hh = h;
+    const h = st ? (st.hx || Math.max(b.h, st.h)) : b.h; b.hh = h; // hx: fixed height (Grand Surya podium; its tower is separate)
     const wc = st ? C(st.wall) : WALLC[Math.floor(r1 * WALLC.length)];
     const ch = chunk(b), W = ch.w, R = ch.r;
     let acc = 0;
@@ -586,9 +586,9 @@ function bigTree(x, z, s) { // beringin (banyan)
   if (LM.jembatan) label3D('SUNGAI BRANTAS', LM.jembatan.x, 6, LM.jembatan.z, '#3f6470', '#fff');
 }
 // facades for the NAMED buildings: one canvas per building on the wall edge that faces the nearest road
-function roadGap(x, z) {
+function roadGap(x, z, only) { // only: street name the facade must face (e.g. 'Jalan Dhoho')
   let bd = 1e9;
-  for (const r of MAP.roads) { if (r.c > 6) continue; const p = r.p; for (let i = 0; i + 3 < p.length; i += 2) { const ax = p[i], az = p[i + 1], dx = p[i + 2] - ax, dz = p[i + 3] - az, L2 = dx * dx + dz * dz || 1; const t = clamp(((x - ax) * dx + (z - az) * dz) / L2, 0, 1); const d = Math.hypot(x - ax - dx * t, z - az - dz * t) - r.w / 2; if (d < bd) bd = d; } }
+  for (const r of MAP.roads) { if (r.c > 6 || (only && MAP.names[r.n] !== only)) continue; const p = r.p; for (let i = 0; i + 3 < p.length; i += 2) { const ax = p[i], az = p[i + 1], dx = p[i + 2] - ax, dz = p[i + 3] - az, L2 = dx * dx + dz * dz || 1; const t = clamp(((x - ax) * dx + (z - az) * dz) / L2, 0, 1); const d = Math.hypot(x - ax - dx * t, z - az - dz * t) - r.w / 2; if (d < bd) bd = d; } }
   return bd;
 }
 // Hand-drawn pixel fronts for the partner / landmark buildings, drawn from reference photos (not the photos themselves).
@@ -664,29 +664,21 @@ const FACADE = {
     R(0, 0, L, 0.12, '#8a8780');
   },
   // hotel: pale concrete blocks, green glass bands, flat canopy, red container entrance, sun emblem near the top
+  // hotel podium (the tower, canopy, stone chimney and container are 3D, see buildSurya): pale concrete parapet,
+  // green glass ribbon, a row of dark-green framed windows, then a glass ground floor behind the canopy
   surya(p) {
-    const { L, h, R, speck, T, fit } = p;
-    R(0, 0, L, h, '#dcdad3'); speck(0, 0, L, h, ['#cfcdc6', '#e6e4dd'], 400);
-    for (let y = 6; y < h - 2; y += 0.9) R(0, y, L, 0.03, '#c3c1ba'); // panel joints
-    for (let y = 6.4; y + 1.6 < h - 2.4; y += 3) for (const x of bays(L, 2.2)) { R(x + 0.35, y, 1.5, 1.6, '#4f7f78'); R(x + 0.35, y + 1.2, 1.5, 0.4, '#7fb3a6'); R(x + 1.05, y, 0.08, 1.6, '#d8dbd5'); }
-    // stone column
-    R(L * 0.72, 4.8, 1.3, h - 4.8, '#c9bfae'); for (let y = 5; y < h; y += 0.6) R(L * 0.72, y, 1.3, 0.04, '#a99d8a');
-    // sun emblem + name near the top
-    const cx = L * 0.25, cy = h - 1.6; p.g.fillStyle = '#e9a23a'; p.g.beginPath(); p.g.arc(cx * p.sx, p.Y(cy), 0.55 * p.sy, Math.PI, 0); p.g.fill();
-    for (let a = 0; a < 7; a++) { const t = Math.PI + (a + 0.5) * Math.PI / 7; R(cx + Math.cos(t) * 0.9 - 0.06, cy - Math.sin(t) * 0.9 - 0.06, 0.12, 0.12, '#e9a23a'); }
-    fit('GRAND SURYA', cx + L * 0.25, h - 1.7, 0.9, L * 0.4, '#8a1f1f');
-    // green glass band + flat canopy
-    R(0, 4.6, L, 0.5, '#6fb59a'); R(0, 4.2, L, 0.4, '#3a3a38'); R(0, 4.15, L, 0.06, '#1f1f1e');
-    // ground floor glass
-    R(0, 0, L, 4.15, '#2f4a46');
-    for (const x of bays(L, 1.6)) { R(x, 0, 0.1, 4.15, '#cfd6d2'); R(x + 0.1, 2.6, 1.5, 0.08, '#cfd6d2'); R(x + 0.25, 2.8, 0.9, 1.1, '#56807a'); }
-    // red container entrance with ribs
-    const kx = L * 0.5, kw = Math.min(4, L * 0.3); R(kx, 0, kw, 2.7, '#a8302a'); for (let x = kx; x < kx + kw; x += 0.25) R(x, 0, 0.08, 2.7, '#7e201c'); R(kx, 2.6, kw, 0.1, '#c94a3e');
-    // pillars
-    for (const x of [L * 0.18, L * 0.92]) R(x, 0, 0.5, 4.2, '#bdb3a2');
-    // planters
-    for (let x = 0.3; x < L * 0.45; x += 0.3) R(x, 0, 0.26, 0.5 + Math.random() * 0.4, Math.random() < 0.5 ? '#3f7a3a' : '#2c5a2c');
-    R(0, 0, L, 0.3, '#8f8b82');
+    const { L, h, R, speck } = p;
+    R(0, 0, L, h, '#e2e0da'); speck(0, 0, L, h, ['#d6d4cd', '#ecebe6'], 300); // parapet concrete
+    for (let x = 0; x < L; x += 2.4) R(x, 6.9, 0.03, h - 6.9, '#cfcdc6'); // panel joints
+    R(0, 6.3, L, 0.55, '#5fa58a'); R(0, 6.8, L, 0.08, '#3c7a64'); R(0, 6.3, L, 0.06, '#2e5e4e'); // green glass ribbon
+    R(0, 4.4, L, 1.9, '#d9d7d0');
+    for (const x of bays(L, 1.7)) { R(x + 0.12, 4.6, 1.46, 1.55, '#1e2f2b'); R(x + 0.12, 4.6, 1.46, 0.08, '#2f5a4e'); R(x + 0.12, 5.3, 1.46, 0.07, '#2f5a4e'); R(x + 0.82, 4.6, 0.07, 1.55, '#2f5a4e'); R(x + 0.2, 5.45, 0.5, 0.6, '#3d5c55'); }
+    // ground floor under the canopy: dark glass with green mullions, a warm lobby glow on the left
+    R(0, 0, L, 4.4, '#18221f');
+    const gr = p.g.createLinearGradient(0, 0, L * 0.4 * p.sx, 0); gr.addColorStop(0, 'rgba(240,190,120,.35)'); gr.addColorStop(1, 'rgba(240,190,120,0)'); p.g.fillStyle = gr; p.g.fillRect(0, p.Y(3.6), L * 0.4 * p.sx, 3.2 * p.sy);
+    for (const x of bays(L, 1.3)) { R(x, 0.3, 0.09, 3.6, '#2f5a4e'); R(x, 2.7, 1.3, 0.08, '#2f5a4e'); R(x + 0.2, 2.85, 0.9, 0.9, '#2a3d38'); }
+    R(L * 0.3, 0.3, 1.6, 2.4, '#4a2a1c'); R(L * 0.3 + 0.78, 0.3, 0.05, 2.4, '#7a5a3a'); // timber door
+    R(0, 0, L, 0.3, '#9a978f'); for (let x = 0; x < L; x += 0.6) R(x, 0, 0.03, 0.3, '#7d7a73'); // steps
   },
   // low cafe in an old house: terracotta roof, green trim, cement wall, open door, green window, stone pier
   tropis(p) {
@@ -788,21 +780,77 @@ function facadeTex(nb, L, h) {
     if (nb.kind === 'hotel') board(h - 2.2, 1.9);
   });
 }
+// Grand Surya: low podium (OSM footprint) + white tower set back on the left with the sun crown and spire,
+// flat dark canopy on slim columns, stone chimney, red container entrance, black wedge planter and the
+// yellow-black "GRAND SURYA HOTEL" arrow sign at the kerb. Local frame: x along the wall (left to right as seen
+// from the street), z out of the facade toward the road.
+function buildSurya(nb, f) {
+  const g = new THREE.Group(); g.position.set(f.mx, 0, f.mz); g.rotation.y = Math.atan2(f.nx, f.nz); scene.add(g);
+  const bx = (w, h, d, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); g.add(m); return m; };
+  const world = (x, z) => [f.mx + f.nz * x + f.nx * z, f.mz - f.nx * x + f.nz * z];
+  const solid = (x, z, w, d) => { const [wx, wz] = world(x, z), r = Math.max(w, d) / 2; addSolid(wx - r, wx + r, wz - r, wz + r); };
+  const L = f.L, H = nb.b.hh;
+  // tower
+  const TW = Math.min(10, L * 0.45), TD = 9, TH = 34, tx = -L / 2 + TW / 2 + 1, tz = -TD / 2 - 4;
+  const towerTex = canvasTex(64, 220, (c, W, Hh) => {
+    c.fillStyle = '#eeece6'; c.fillRect(0, 0, W, Hh);
+    for (let y = 10; y < Hh - 6; y += 7) for (let x = 6; x < W - 6; x += 13) { c.fillStyle = '#3f7466'; c.fillRect(x, y, 8, 4); c.fillStyle = '#7fb3a2'; c.fillRect(x, y, 8, 1); }
+    c.fillStyle = '#d9d6ce'; c.fillRect(W / 2 - 3, 0, 6, Hh); // vertical rib
+  });
+  const towerM = lam({ map: towerTex }), white = lam({ color: '#efede7' });
+  bx(TW, TH, TD, [towerM, towerM, white, white, towerM, towerM], tx, TH / 2, tz);
+  bx(TW * 0.7, 5, TD * 0.7, white, tx, TH + 2.5, tz); // crown
+  bx(TW * 0.8, 0.4, TD * 0.8, lam({ color: '#c9c6bd' }), tx, TH + 0.2, tz);
+  const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.35, 7, 6), lam({ color: '#d8d6d0' })); sp.position.set(tx, TH + 8.5, tz); g.add(sp);
+  const sun = new THREE.Mesh(new THREE.PlaneGeometry(4, 3), new THREE.MeshBasicMaterial({ transparent: true, map: canvasTex(64, 48, (c, W, Hh) => {
+    c.fillStyle = '#e39a2e'; c.beginPath(); c.arc(W / 2, 30, 11, Math.PI, 0); c.fill();
+    c.strokeStyle = '#e39a2e'; c.lineWidth = 3; for (let a = 0; a < 9; a++) { const t = Math.PI + (a + 0.5) * Math.PI / 9; c.beginPath(); c.moveTo(W / 2 + Math.cos(t) * 14, 30 + Math.sin(t) * 14); c.lineTo(W / 2 + Math.cos(t) * 21, 30 + Math.sin(t) * 21); c.stroke(); }
+    c.fillStyle = '#8a1f1f'; c.fillRect(W / 2 - 14, 33, 28, 3);
+  }, false) }));
+  sun.position.set(tx, TH + 2.6, tz + TD * 0.35 + 0.02); g.add(sun);
+  gridBox(...world(tx, tz), TW, TD, TH, g.rotation.y);
+  // canopy on slim columns
+  const cw = L * 0.72, cx = L * 0.06, cd = 4.6, cy = 4.4;
+  bx(cw, 0.35, cd, lam({ color: '#3a3b3c' }), cx, cy, cd / 2);
+  bx(cw, 0.12, 0.2, lam({ color: '#cfd2cf' }), cx, cy + 0.2, cd); // trim
+  bx(cw * 0.9, 0.5, 0.15, lam({ color: '#5fa58a', emissive: '#16302a' }), cx, cy + 0.55, 0.3); // glass ribbon above
+  for (const s of [-0.42, 0.42]) { const col = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, cy, 6), white); col.position.set(cx + s * cw, cy / 2, cd - 0.3); g.add(col); }
+  // stone chimney on the right
+  const stone = lam({ map: canvasTex(16, 64, (c, W, Hh) => { c.fillStyle = '#c4b9a6'; c.fillRect(0, 0, W, Hh); for (let y = 0; y < Hh; y += 5) { c.fillStyle = '#a89c87'; c.fillRect(0, y, W, 1); c.fillRect((y / 5) % 2 ? 4 : 11, y, 1, 5); } }) });
+  const chx = L * 0.36; bx(1.8, H + 3.5, 1.8, stone, chx, (H + 3.5) / 2, 0.6); bx(2.1, 0.4, 2.1, stone, chx, H + 3.7, 0.6); solid(chx, 0.6, 1.8, 1.8);
+  // red ribbed container entrance
+  const cont = lam({ map: canvasTex(64, 32, (c, W, Hh) => { c.fillStyle = '#b2302a'; c.fillRect(0, 0, W, Hh); for (let x = 0; x < W; x += 4) { c.fillStyle = '#851f1b'; c.fillRect(x, 0, 2, Hh); } c.fillStyle = '#c84a3e'; c.fillRect(0, 0, W, 2); c.fillRect(0, Hh - 2, W, 2); }) });
+  const kx = L * 0.14; bx(4.6, 2.7, 2.2, cont, kx, 1.35 + 0.3, 1.1); solid(kx, 1.1, 4.6, 2.2);
+  // black wedge planter by the drive
+  const wedge = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 1.1, 2.4, 4), lam({ color: '#1e1f21' })); wedge.position.set(-L * 0.2, 1.2, 3.2); wedge.rotation.y = Math.PI / 4; g.add(wedge); solid(-L * 0.2, 3.2, 1.6, 1.6);
+  for (let i = 0; i < 6; i++) { const sh = new THREE.Mesh(new THREE.IcosahedronGeometry(0.45, 0), lam({ color: i % 2 ? '#3f7a3a' : '#2c5a2c' })); sh.position.set(-L * 0.1 + i * 0.8, 0.5, 2.2); g.add(sh); }
+  // yellow-black arrow sign at the kerb
+  const sx = -L * 0.05, sz = 6.2, yb = lam({ map: canvasTex(8, 32, (c, W, Hh) => { for (let y = 0; y < Hh; y += 8) { c.fillStyle = '#e8c21a'; c.fillRect(0, y, W, 4); c.fillStyle = '#151515'; c.fillRect(0, y + 4, W, 4); } }) });
+  for (const s of [-1.6, 1.6]) { bx(0.12, 3, 0.12, yb, sx + s, 1.5, sz); solid(sx + s, sz, 0.3, 0.3); }
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(3.8, 0.75), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, map: canvasTex(160, 32, (c, W, Hh) => {
+    c.fillStyle = '#151515'; c.fillRect(0, 0, W, Hh); c.strokeStyle = '#e8c21a'; c.lineWidth = 2; c.strokeRect(2, 2, W - 4, Hh - 4);
+    c.fillStyle = '#e8c21a'; c.fillRect(8, 13, 18, 6); c.beginPath(); c.moveTo(4, 16); c.lineTo(12, 8); c.lineTo(12, 24); c.fill();
+    c.font = 'bold 14px monospace'; c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText('GRAND SURYA HOTEL', 32, 17);
+  }, false) }));
+  sign.position.set(sx, 2.55, sz + 0.07); g.add(sign);
+  return { tower: TH + 12 };
+}
 for (const nb of NAMED) {
   const b = nb.b; if (!b) continue; const p = b.p, n = p.length / 2;
   let best = null;
   for (let i = 0; i < n; i++) {
     const j = (i + 1) % n, ax = p[i * 2], az = p[i * 2 + 1], bx = p[j * 2], bz = p[j * 2 + 1], L = Math.hypot(bx - ax, bz - az); if (L < 3) continue;
     let nx = (bz - az) / L, nz = -(bx - ax) / L; const mx = (ax + bx) / 2, mz = (az + bz) / 2; if ((mx - b.cx) * nx + (mz - b.cz) * nz < 0) { nx = -nx; nz = -nz; }
-    const score = roadGap(mx + nx * 3, mz + nz * 3) - L * 0.15;
+    const score = roadGap(mx + nx * 3, mz + nz * 3, nb.street) - L * 0.15;
     if (!best || score < best.score) best = { score, mx, mz, nx, nz, L };
   }
   if (!best) continue;
   const h = b.hh, f = new THREE.Mesh(new THREE.PlaneGeometry(best.L, h), lam({ map: facadeTex(nb, best.L, h) }));
   f.position.set(best.mx + best.nx * 0.06, h / 2, best.mz + best.nz * 0.06); f.rotation.y = Math.atan2(best.nx, best.nz); scene.add(f);
   nb.front = best;
-  if (nb.kind !== 'station') label3D(nb.name, b.cx, h + 4, b.cz, nb.accent, nb.fg, 0.8);
-  if (nb.kind === 'hotel') { // rooftop billboard
+  const extra = nb.id === 'surya' ? buildSurya(nb, best) : null;
+  if (nb.kind !== 'station') label3D(nb.name, b.cx, extra ? extra.tower + 3 : h + 4, b.cz, nb.accent, nb.fg, 0.8);
+  if (nb.kind === 'hotel' && !extra) { // rooftop billboard
     const grey = lam({ color: '#333' }), face = textSign(nb.name, nb.accent, nb.fg, 256, 56, 34);
     const bb = new THREE.Mesh(new THREE.BoxGeometry(Math.min(14, best.L), 3, 0.3), [grey, grey, grey, grey, face, face]);
     bb.position.set(b.cx, h + 3.2, b.cz); bb.rotation.y = Math.atan2(best.nx, best.nz); scene.add(bb);
@@ -1220,7 +1268,14 @@ let billboard = null;
 function ensureBillboard() {
   if (billboard) return billboard;
   // big LED board on a concrete column at the kerb, cantilevered over the street and facing traffic coming up from the south
-  const [x, z] = kerbFront(81, -262), [cx, cz] = dhohoLine(0.62), [ax, az] = dhohoLine(0.6), [bx, bz] = dhohoLine(0.64);
+  // stands on the east kerb in front of Grand Surya (a few metres south of its entrance)
+  const sf = NAMED.find((n) => n.id === 'surya')?.front;
+  let tb = 0.62, bd = 1e9; const ax0 = sf ? sf.mx + sf.nx * 4 : 81, az0 = sf ? sf.mz + sf.nz * 4 : -262;
+  for (let t = 0.4; t <= 0.8; t += 0.002) { const [qx, qz] = dhohoLine(t), d = Math.hypot(qx - ax0, qz - az0); if (d < bd) { bd = d; tb = t; } }
+  tb = Math.max(0, tb - 0.012); // south of the entrance so the screen faces the hotel's approach
+  const [cx, cz] = dhohoLine(tb), [ax, az] = dhohoLine(tb - 0.02), [bx, bz] = dhohoLine(tb + 0.02);
+  const ex = sf ? -sf.nx : 1, ez = sf ? -sf.nz : 0; // facade normal points at the street, so the hotel side is against it
+  const [x, z] = kerbFront(cx + ex * 7, cz + ez * 7);
   let ux = x - cx, uz = z - cz; const m = Math.hypot(ux, uz) || 1; ux /= m; uz /= m; // away from the road
   let fx = ax - bx, fz = az - bz; const fm = Math.hypot(fx, fz) || 1; fx /= fm; fz /= fm; // screen normal: back down the street (south)
   const rot = Math.atan2(fx, fz), s = (Math.cos(rot) * -ux - Math.sin(rot) * -uz) >= 0 ? 1 : -1; // local +x*s points over the road
