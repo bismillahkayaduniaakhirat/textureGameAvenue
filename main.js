@@ -393,7 +393,7 @@ const LM_STYLE = { masjid: { wall: '#eeeae0', roof: '#2f7a4a', h: 9 }, klenteng:
 // client-named buildings (brief): the OSM footprint under each Google Maps pin gets its own colours,
 // a painted facade on the side that faces the road and a name board. Everything else stays a plain house/ruko.
 const NAMED = [
-  { id: 'aries', name: 'ARIES MOTOR', ll: [-7.815769, 112.013859], kind: 'showroom', wall: '#e9eef2', roof: '#8a8f96', accent: '#c8102e', fg: '#fff', h: 9 },
+  { id: 'aries', name: 'ARIES MOTOR', ll: [-7.8156213, 112.0135838], kind: 'showroom', wall: '#e9eef2', roof: '#8a8f96', accent: '#c8102e', fg: '#fff', h: 9 },
   { id: 'skdp', name: 'SKDP.', ll: [-7.8178821, 112.0128239], kind: 'cafe', wall: '#2e2c2a', roof: '#3a3634', accent: '#f2e8d2', fg: '#1a1a1a', h: 8 },
   { id: 'surya', name: 'GRAND SURYA', ll: [-7.817707, 112.0132129], kind: 'hotel', wall: '#efe6d2', roof: '#7a6a58', accent: '#8a1f1f', fg: '#ffd86a', h: 22 },
   { id: 'tropis', name: 'TROPIS COFFEE', ll: [-7.8190061, 112.0106658], kind: 'cafe', wall: '#2f6a3e', roof: '#3a4a32', accent: '#ffd86a', fg: '#1d3a22', h: 6 },
