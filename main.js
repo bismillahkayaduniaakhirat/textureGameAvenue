@@ -412,11 +412,39 @@ const NAMED = [
   }
   if (LM_BLD.stasiun) NAMED.push({ id: 'stasiun', name: 'STASIUN KEDIRI', kind: 'station', accent: '#1a2a6a', fg: '#fff', wall: LM_STYLE.stasiun.wall, b: LM_BLD.stasiun });
 }
+// road mask (1 m cells, same grid as OCC): R = on the carriageway, G = on the centre line.
+// Used to drop OSM footprints that sit across a street (otherwise gangs look open but are walled off)
+// and to keep scattered trees off the tarmac.
+const ROADM = (() => {
+  const c = document.createElement('canvas'); c.width = GW; c.height = GH;
+  const g = c.getContext('2d', { willReadFrequently: true }); g.setTransform(IMG_FROM_GAME); g.lineCap = 'round'; g.lineJoin = 'round';
+  g.strokeStyle = 'rgb(255,0,0)'; for (const r of MAP.roads) { if (r.c > 7) continue; g.lineWidth = r.w + 0.8; g.beginPath(); linePath(g, r.p); g.stroke(); }
+  g.strokeStyle = 'rgb(255,255,0)'; for (const r of MAP.roads) { if (r.c > 7 || r.b) continue; g.lineWidth = 1.6; g.beginPath(); linePath(g, r.p); g.stroke(); }
+  const d = g.getImageData(0, 0, GW, GH).data, m = new Uint8Array(GW * GH);
+  for (let i = 0; i < m.length; i++) m[i] = (d[i * 4] >= 128 ? 1 : 0) | (d[i * 4 + 1] >= 128 ? 2 : 0);
+  return m;
+})();
+const onRoad = (x, z) => { const k = cellOf(x, z); return k >= 0 && (ROADM[k] & 1) === 1; };
+BLD.forEach((b, bi) => { // plain footprint over a street centre line: leave it out (mesh + collider + minimap)
+  if (b.nm || b.lmk) return;
+  const q = []; for (let i = 0; i < b.p.length; i += 2) q.push(...toImg(b.p[i], b.p[i + 1]));
+  let u0 = 1e9, u1 = -1e9, v0 = 1e9, v1 = -1e9;
+  for (let i = 0; i < q.length; i += 2) { u0 = Math.min(u0, q[i]); u1 = Math.max(u1, q[i]); v0 = Math.min(v0, q[i + 1]); v1 = Math.max(v1, q[i + 1]); }
+  let hits = 0;
+  for (let v = Math.max(0, Math.floor(v0)); v <= Math.min(GH - 1, Math.floor(v1)); v++) for (let u = Math.max(0, Math.floor(u0)); u <= Math.min(GW - 1, Math.floor(u1)); u++) {
+    if (!(ROADM[v * GW + u] & 2)) continue;
+    const x = u + 0.5, z = v + 0.5; let c = false;
+    for (let i = 0, j = q.length - 2; i < q.length; j = i, i += 2) if ((q[i + 1] > z) !== (q[j + 1] > z) && x < (q[j] - q[i]) * (z - q[i + 1]) / (q[j + 1] - q[i + 1]) + q[i]) c = !c;
+    if (c) hits++;
+  }
+  if (hits >= 1) { b.cut = true; MAP.bld[bi].cut = true; }
+});
 {
   const chunks = new Map(); const signs = new GeoBuf();
   const chunk = (b) => { const k = `${Math.floor(b.cx / 200)},${Math.floor(b.cz / 200)}`; if (!chunks.has(k)) chunks.set(k, { w: new GeoBuf(), r: new GeoBuf() }); return chunks.get(k); };
   let hseed = 0;
   for (const b of BLD) {
+    if (b.cut) continue;
     const p = b.p, n = p.length / 2, st = LM_STYLE[b.lmk] || b.nm;
     const r1 = ((hseed = (hseed * 9301 + 49297) % 233280) / 233280);
     const h = st ? Math.max(b.h, st.h) : b.h; b.hh = h;
@@ -563,11 +591,163 @@ function roadGap(x, z) {
   for (const r of MAP.roads) { if (r.c > 6) continue; const p = r.p; for (let i = 0; i + 3 < p.length; i += 2) { const ax = p[i], az = p[i + 1], dx = p[i + 2] - ax, dz = p[i + 3] - az, L2 = dx * dx + dz * dz || 1; const t = clamp(((x - ax) * dx + (z - az) * dz) / L2, 0, 1); const d = Math.hypot(x - ax - dx * t, z - az - dz * t) - r.w / 2; if (d < bd) bd = d; } }
   return bd;
 }
+// Hand-drawn pixel fronts for the partner / landmark buildings, drawn from reference photos (not the photos themselves).
+// Units are metres: x from the left edge of the wall, y up from the ground.
+function facadePen(g, W, H, sx, sy, L, h) {
+  const Y = (m) => H - m * sy;
+  const R = (x, y, w, hh, c) => { g.fillStyle = c; g.fillRect(Math.round(x * sx), Math.round(Y(y + hh)), Math.max(1, Math.round(w * sx)), Math.max(1, Math.round(hh * sy))); };
+  const speck = (x, y, w, hh, cols, n) => { for (let i = 0; i < n; i++) { g.fillStyle = cols[(Math.random() * cols.length) | 0]; g.fillRect(Math.round((x + Math.random() * w) * sx), Math.round(Y(y + Math.random() * hh)), 2, 2); } };
+  const T = (txt, x, y, size, c, align = 'center', font = 'monospace', weight = 'bold') => { g.fillStyle = c; g.font = `${weight} ${Math.max(6, Math.round(size * sy))}px ${font}`; g.textAlign = align; g.textBaseline = 'middle'; g.fillText(txt, x * sx, Y(y)); };
+  const fit = (txt, x, y, size, maxW, c, font, weight) => { let s = size; g.font = `${weight || 'bold'} ${Math.round(s * sy)}px ${font || 'monospace'}`; while (s > 0.2 && g.measureText(txt).width > maxW * sx) { s *= 0.92; g.font = `${weight || 'bold'} ${Math.round(s * sy)}px ${font || 'monospace'}`; } T(txt, x, y, s, c, 'center', font, weight); };
+  return { g, W, H, sx, sy, L, h, Y, R, speck, T, fit };
+}
+// bays of `bw` metres centred on the wall
+const bays = (L, bw) => { const n = Math.max(1, Math.floor(L / bw)), x0 = (L - n * bw) / 2; return Array.from({ length: n }, (_, i) => x0 + i * bw); };
+const FACADE = {
+  // corner motorbike dealer + service: white tiled storeys, ribbon windows, big red panel, blue shopfront with bikes
+  aries(p) {
+    const { L, h, R, speck, T, fit } = p;
+    R(0, 0, L, h, '#e4e6e4'); // white tile
+    for (let y = 3.6; y < h; y += 0.35) R(0, y, L, 0.03, '#c9cccb');
+    for (let x = 0; x < L; x += 0.35) R(x, 3.6, 0.03, h - 3.6, '#d3d6d5');
+    R(0, h - 0.35, L, 0.35, '#9ea3a4'); // roof edge
+    // slab bands + ribbon windows
+    for (const y of [4.4, 6.8]) { R(0, y + 1.5, L, 0.35, '#f4f5f3'); R(0, y + 1.45, L, 0.06, '#a8adae'); R(0.3, y, L * 0.55, 1.3, '#3c4650'); for (let x = 0.3; x < L * 0.55; x += 1.1) R(x, y, 0.08, 1.3, '#cfd3d4'); R(0.3, y + 1.1, L * 0.55, 0.2, '#5b6b78'); }
+    // red brand panel
+    const px = L * 0.62, pw = Math.min(L * 0.33, 6);
+    R(px, 3.9, pw, h - 4.6, '#b3242c'); R(px, 3.9, pw, 0.12, '#7a1418'); speck(px, 3.9, pw, h - 4.6, ['#c22d35', '#a11f26'], 60);
+    fit('ARIES', px + pw / 2, h - 1.6, 1.0, pw - 0.4, '#fff');
+    fit('MOTOR', px + pw / 2, h - 2.7, 0.8, pw - 0.4, '#fff');
+    for (let i = 0; i < 3; i++) { const bx = px + 0.3 + i * (pw - 0.6) / 3; R(bx, 4.3, (pw - 0.6) / 3 - 0.2, 1.2, '#f4f1ea'); R(bx + 0.15, 4.5, (pw - 0.6) / 3 - 0.5, 0.8, '#b3242c'); }
+    // canopy
+    R(0, 3.1, L, 0.5, '#d8dbda'); R(0, 3.05, L, 0.08, '#6e7476');
+    R(L * 0.12, 3.15, 2.6, 0.38, '#fff'); T('ARIES', L * 0.12 + 1.3, 3.34, 0.3, '#b3242c');
+    R(L * 0.7, 3.15, 2.2, 0.38, '#fff'); T('SERVIS', L * 0.7 + 1.1, 3.34, 0.3, '#b3242c');
+    // shopfront: blue-teal frames, dark glass, bikes on display
+    R(0, 0, L, 3.05, '#26303a');
+    for (const x of bays(L, 2.4)) {
+      R(x + 0.08, 0.25, 2.24, 2.7, '#33414e'); R(x + 0.08, 2.5, 2.24, 0.45, '#46708c');
+      R(x, 0, 0.12, 3.05, '#3f7fa6'); // frame
+      // bike
+      R(x + 0.5, 0.45, 1.3, 0.35, '#c8202a'); R(x + 0.6, 0.8, 0.6, 0.18, '#1a1a1a'); R(x + 1.5, 0.8, 0.25, 0.35, '#888');
+      R(x + 0.4, 0.15, 0.35, 0.35, '#111'); R(x + 1.55, 0.15, 0.35, 0.35, '#111');
+    }
+    R(L - 0.12, 0, 0.12, 3.05, '#3f7fa6');
+    R(L * 0.45, 0.4, 0.7, 1.8, '#e9e4d6'); R(L * 0.45 + 0.08, 0.5, 0.54, 1.5, '#b3242c'); // promo standee
+    R(0, 0, L, 0.15, '#9a9e9e'); // step
+  },
+  // narrow cafe: grey concrete hood with big lettering, white fascia, open front, brick piers, plants, block bench
+  skdp(p) {
+    const { L, h, R, speck, T, fit } = p;
+    const sw = Math.min(L, 9), s0 = (L - sw) / 2;
+    R(0, 0, L, h, '#cfcac0'); speck(0, 0, L, h, ['#bdb7ac', '#d9d4ca'], 120); // neighbours
+    // brick piers
+    for (const bx of [s0, s0 + sw - 0.7]) { R(bx, 0, 0.7, 3.6, '#8c4a33'); for (let y = 0; y < 3.6; y += 0.18) for (let x = bx + ((y / 0.18) % 2 ? 0 : 0.12); x < bx + 0.7; x += 0.25) R(x, y, 0.2, 0.13, Math.random() < 0.5 ? '#a35a3c' : '#7a3e2a'); }
+    // concrete hood
+    R(s0, 3.6, sw, h - 3.6, '#7a7872'); speck(s0, 3.6, sw, h - 3.6, ['#6a6862', '#8a8882', '#5e5c57'], 260);
+    R(s0, h - 0.25, sw, 0.25, '#55534f');
+    fit('SKDP.', s0 + sw / 2, 3.6 + (h - 3.6) * 0.55, 1.4, sw * 0.55, '#f3e6d0', 'Georgia, serif');
+    // fascia
+    R(s0, 3.0, sw, 0.6, '#f4f1ea'); R(s0, 2.95, sw, 0.06, '#9a948a');
+    fit('sekedap · kopian · kudapan', s0 + sw / 2, 3.3, 0.26, sw * 0.6, '#2a2622', 'monospace', 'normal');
+    // open front, warm interior
+    const ix = s0 + 0.7, iw = sw - 1.4;
+    const gr = p.g.createLinearGradient(0, p.Y(3), 0, p.Y(0)); gr.addColorStop(0, '#2a221c'); gr.addColorStop(1, '#4a3a2c'); p.g.fillStyle = gr; p.g.fillRect(ix * p.sx, p.Y(2.95), iw * p.sx, 2.95 * p.sy);
+    for (let r = 0; r < 3; r++) for (let x = ix + 0.5 + r * 0.3; x < ix + iw - 0.4; x += 1.1) R(x, 2.75 - r * 0.22, 0.35, 0.06, '#ffd890');
+    R(ix + iw * 0.15, 0.9, iw * 0.4, 0.5, '#e6e1d6'); R(ix + iw * 0.15, 0.3, iw * 0.4, 0.6, '#b98a52'); // counter
+    R(ix + iw * 0.2, 1.4, 0.5, 0.35, '#c02a26'); R(ix + iw * 0.35, 1.4, 0.2, 0.4, '#ddd'); // espresso machine
+    R(ix + iw * 0.62, 0.3, 0.12, 2.3, '#3a2e24');
+    // plants
+    for (const [px, ph] of [[ix + 0.1, 1.1], [ix + iw - 1.1, 1.4]]) for (let i = 0; i < 18; i++) R(px + Math.random() * 1, 0.4 + Math.random() * ph, 0.22, 0.12, ['#2e6a32', '#3f8a3e', '#24502a'][i % 3]);
+    // breeze-block bench
+    for (let x = ix + iw * 0.15; x < ix + iw * 0.5; x += 0.42) { R(x, 0, 0.38, 0.45, '#c8c6c0'); R(x + 0.08, 0.1, 0.1, 0.25, '#77756f'); R(x + 0.22, 0.1, 0.1, 0.25, '#77756f'); }
+    R(0, 0, L, 0.12, '#8a8780');
+  },
+  // hotel: pale concrete blocks, green glass bands, flat canopy, red container entrance, sun emblem near the top
+  surya(p) {
+    const { L, h, R, speck, T, fit } = p;
+    R(0, 0, L, h, '#dcdad3'); speck(0, 0, L, h, ['#cfcdc6', '#e6e4dd'], 400);
+    for (let y = 6; y < h - 2; y += 0.9) R(0, y, L, 0.03, '#c3c1ba'); // panel joints
+    for (let y = 6.4; y + 1.6 < h - 2.4; y += 3) for (const x of bays(L, 2.2)) { R(x + 0.35, y, 1.5, 1.6, '#4f7f78'); R(x + 0.35, y + 1.2, 1.5, 0.4, '#7fb3a6'); R(x + 1.05, y, 0.08, 1.6, '#d8dbd5'); }
+    // stone column
+    R(L * 0.72, 4.8, 1.3, h - 4.8, '#c9bfae'); for (let y = 5; y < h; y += 0.6) R(L * 0.72, y, 1.3, 0.04, '#a99d8a');
+    // sun emblem + name near the top
+    const cx = L * 0.25, cy = h - 1.6; p.g.fillStyle = '#e9a23a'; p.g.beginPath(); p.g.arc(cx * p.sx, p.Y(cy), 0.55 * p.sy, Math.PI, 0); p.g.fill();
+    for (let a = 0; a < 7; a++) { const t = Math.PI + (a + 0.5) * Math.PI / 7; R(cx + Math.cos(t) * 0.9 - 0.06, cy - Math.sin(t) * 0.9 - 0.06, 0.12, 0.12, '#e9a23a'); }
+    fit('GRAND SURYA', cx + L * 0.25, h - 1.7, 0.9, L * 0.4, '#8a1f1f');
+    // green glass band + flat canopy
+    R(0, 4.6, L, 0.5, '#6fb59a'); R(0, 4.2, L, 0.4, '#3a3a38'); R(0, 4.15, L, 0.06, '#1f1f1e');
+    // ground floor glass
+    R(0, 0, L, 4.15, '#2f4a46');
+    for (const x of bays(L, 1.6)) { R(x, 0, 0.1, 4.15, '#cfd6d2'); R(x + 0.1, 2.6, 1.5, 0.08, '#cfd6d2'); R(x + 0.25, 2.8, 0.9, 1.1, '#56807a'); }
+    // red container entrance with ribs
+    const kx = L * 0.5, kw = Math.min(4, L * 0.3); R(kx, 0, kw, 2.7, '#a8302a'); for (let x = kx; x < kx + kw; x += 0.25) R(x, 0, 0.08, 2.7, '#7e201c'); R(kx, 2.6, kw, 0.1, '#c94a3e');
+    // pillars
+    for (const x of [L * 0.18, L * 0.92]) R(x, 0, 0.5, 4.2, '#bdb3a2');
+    // planters
+    for (let x = 0.3; x < L * 0.45; x += 0.3) R(x, 0, 0.26, 0.5 + Math.random() * 0.4, Math.random() < 0.5 ? '#3f7a3a' : '#2c5a2c');
+    R(0, 0, L, 0.3, '#8f8b82');
+  },
+  // low cafe in an old house: terracotta roof, green trim, cement wall, open door, green window, stone pier
+  tropis(p) {
+    const { L, h, R, speck, T, fit } = p;
+    const rt = Math.min(1.8, h * 0.3); // roof height
+    R(0, 0, L, h, '#a9a69c'); speck(0, 0, L, h - rt, ['#9a978d', '#b6b3a9', '#8e8b82'], 300);
+    for (let i = 0; i < 8; i++) R(Math.random() * L, 1 + Math.random() * (h - rt - 2), 0.5 + Math.random(), 0.8 + Math.random() * 1.2, 'rgba(70,64,54,.18)'); // stains
+    // roof tiles
+    R(0, h - rt, L, rt, '#9c5a3c');
+    for (let y = h - rt; y < h; y += 0.22) { R(0, y, L, 0.05, '#6e3a26'); for (let x = (y * 7) % 0.4; x < L; x += 0.4) R(x, y, 0.04, 0.22, '#b26a48'); }
+    R(0, h - rt - 0.25, L, 0.25, '#2f6a3e'); // green fascia
+    for (const x of bays(L, 9)) {
+      // left window with menu board
+      R(x + 0.4, 1.0, 2.0, 1.4, '#2b2a28'); R(x + 0.5, 1.1, 1.8, 1.2, '#3e3a32'); R(x + 0.4, 2.4, 2.0, 0.12, '#2f6a3e');
+      T('tropis', x + 1.4, h - rt - 0.8, 0.45, '#2a2a28', 'center', 'Georgia, serif');
+      // open door, bright interior
+      R(x + 3.2, 0, 2.0, 2.8, '#3a3a38'); R(x + 3.32, 0, 1.76, 2.68, '#e4e0d4'); R(x + 3.32, 0, 1.76, 0.5, '#bfb9aa'); R(x + 3.9, 0.6, 0.5, 1.0, '#2f2f2d'); R(x + 3.6, 0.2, 0.3, 1.2, '#fff');
+      // green window
+      R(x + 6.0, 1.1, 1.8, 1.3, '#2f7a3e'); R(x + 6.12, 1.2, 1.56, 1.1, '#26302c'); R(x + 6.85, 1.2, 0.08, 1.1, '#2f7a3e');
+      // stone pier
+      R(x + 8.2, 0, 0.8, h - rt - 0.25, '#55544e'); for (let i = 0; i < 26; i++) R(x + 8.2 + Math.random() * 0.6, Math.random() * (h - rt - 0.5), 0.2, 0.15, ['#77756c', '#3e3d38', '#8a877d'][i % 3]);
+      // stools + table
+      R(x + 5.6, 0.7, 0.6, 0.08, '#d9b47a'); R(x + 5.85, 0, 0.1, 0.7, '#b58e55'); R(x + 7.1, 0.5, 0.5, 0.08, '#d9b47a'); R(x + 7.3, 0, 0.08, 0.5, '#b58e55'); R(x + 2.6, 0.55, 0.5, 0.08, '#2f7a3e'); R(x + 2.8, 0, 0.08, 0.55, '#2f7a3e');
+    }
+    R(0, 0, L, 0.18, '#7d7a72');
+  },
+  // colonial station hall: white walls, red dado, arched doors with fanlights, corrugated roof, KEDIRI on the gable
+  stasiun(p) {
+    const { L, h, R, speck, T, fit, g, sx, sy, Y } = p;
+    const rt = Math.min(2.4, h * 0.3);
+    R(0, 0, L, h, '#ecebe3'); speck(0, 0, L, h - rt, ['#e0dfd6', '#f4f3ec'], 200);
+    R(0, 0, L, 1.1, '#a5332c'); R(0, 1.1, L, 0.08, '#7a2420');
+    // corrugated roof + central gable
+    R(0, h - rt, L, rt, '#5a524c'); for (let x = 0; x < L; x += 0.2) R(x, h - rt, 0.06, rt, '#463f3a');
+    const gx = L / 2, gw = Math.min(L * 0.5, 10);
+    g.fillStyle = '#e6e4da'; g.beginPath(); g.moveTo((gx - gw / 2) * sx, Y(h - rt)); g.lineTo(gx * sx, Y(h)); g.lineTo((gx + gw / 2) * sx, Y(h - rt)); g.fill();
+    g.strokeStyle = '#4a433e'; g.lineWidth = 3; g.stroke();
+    fit('KEDIRI', gx, h - rt * 0.62, rt * 0.36, gw * 0.5, '#2a2a2a', 'Georgia, serif');
+    R(0, h - rt - 0.3, L, 0.3, '#d6d3c8'); // cornice
+    // arched bays
+    for (const x of bays(L, 4)) {
+      const cx = x + 2, dw = 1.6, top = Math.min(h - rt - 1.4, 2.8);
+      R(cx - dw / 2 - 0.2, 0, dw + 0.4, top + 0.2, '#d4d1c6');
+      R(cx - dw / 2, 0, dw, top, '#3f5263'); R(cx - 0.04, 0, 0.08, top, '#2a3644'); // door leaves
+      R(cx - dw / 2 + 0.15, top * 0.45, dw / 2 - 0.25, top * 0.4, '#8fb0c4'); R(cx + 0.1, top * 0.45, dw / 2 - 0.25, top * 0.4, '#8fb0c4');
+      // fanlight
+      g.fillStyle = '#d4d1c6'; g.beginPath(); g.arc(cx * sx, Y(top), (dw / 2 + 0.2) * sx, Math.PI, 0); g.fill();
+      g.fillStyle = '#cfe0ea'; g.beginPath(); g.arc(cx * sx, Y(top), (dw / 2) * sx, Math.PI, 0); g.fill();
+      g.strokeStyle = '#6a7a86'; g.lineWidth = 1.5; for (let a = 1; a < 8; a++) { const t = Math.PI + a * Math.PI / 8; g.beginPath(); g.moveTo(cx * sx, Y(top)); g.lineTo((cx + Math.cos(t) * dw / 2) * sx, Y(top - Math.sin(t) * dw / 2)); g.stroke(); }
+    }
+    // lamp + sign
+    R(L / 2 - 0.15, h - rt - 0.9, 0.3, 0.3, '#fff4c0'); R(L / 2 - 1.2, h - rt - 1.4, 2.4, 0.35, '#e8c23a'); R(L / 2 - 1.1, h - rt - 1.33, 2.2, 0.2, '#1a2a6a');
+    R(0, 0, L, 0.15, '#7d7a72');
+  },
+};
 function facadeTex(nb, L, h) {
   const ppm = 24, W = Math.min(512, Math.max(64, Math.round(L * ppm))), H = Math.min(512, Math.max(64, Math.round(h * ppm))); const sx = W / L, sy = H / h;
   return canvasTex(W, H, (g) => {
     const Y = (m) => H - m * sy; // metres above ground -> canvas y
     g.fillStyle = nb.wall; g.fillRect(0, 0, W, H); noise(g, W, H, 22, 2);
+    if (FACADE[nb.id]) { FACADE[nb.id](facadePen(g, W, H, sx, sy, L, h)); return; } // hand-drawn fronts for the partner / landmark buildings
     // upper floors: window rows every 3.3 m
     for (let fy = 4.6; fy + 2 < h; fy += 3.3) for (let wx = 0.8; wx + 1.4 < L; wx += 2.6) {
       g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(wx * sx - 1, Y(fy + 1.9) - 1, 1.4 * sx + 2, 1.7 * sy + 2);
@@ -634,7 +814,8 @@ finishGrid();
 // ---- street + park trees (instanced; trunks block movement) ----
 {
   const spots = [];
-  const tryAdd = (x, z, s) => { if (spots.length < 1600 && freeAt(x, z, 1.4)) { spots.push([x, z, s]); const k = cellOf(x, z); OCC[k] = 1; } };
+  const clearOfRoad = (x, z) => [[0, 0], [1.2, 0], [-1.2, 0], [0, 1.2], [0, -1.2]].every(([dx, dz]) => !onRoad(x + dx, z + dz));
+  const tryAdd = (x, z, s) => { if (spots.length < 1600 && freeAt(x, z, 1.4) && clearOfRoad(x, z)) { spots.push([x, z, s]); const k = cellOf(x, z); OCC[k] = 1; } };
   for (const pk of MAP.parks) { // scatter inside park polygons
     const p = pk.p; if (pk.k) continue; let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
     for (let i = 0; i < p.length; i += 2) { x0 = Math.min(x0, p[i]); x1 = Math.max(x1, p[i]); z0 = Math.min(z0, p[i + 1]); z1 = Math.max(z1, p[i + 1]); }
@@ -664,6 +845,8 @@ finishGrid();
   });
   scene.add(tr, lf);
 }
+// street centre lines stay walkable where only flat blockers (water edge, park scatter) overlap them; buildings keep their walls
+for (let k = 0; k < OCC.length; k++) if ((ROADM[k] & 2) && OCC[k] && HGT[k] === 0) OCC[k] = 0;
 
 // ---- distant mountains (follow the camera like the sky): Klotok + Wilis to the west, Kelud to the east ----
 {
@@ -1036,23 +1219,68 @@ function behindAries() {
 let billboard = null;
 function ensureBillboard() {
   if (billboard) return billboard;
-  const [x, z] = kerbFront(81, -262), [cx, cz] = dhohoLine(0.62);
+  // big LED board on a concrete column at the kerb, cantilevered over the street and facing traffic coming up from the south
+  const [x, z] = kerbFront(81, -262), [cx, cz] = dhohoLine(0.62), [ax, az] = dhohoLine(0.6), [bx, bz] = dhohoLine(0.64);
   let ux = x - cx, uz = z - cz; const m = Math.hypot(ux, uz) || 1; ux /= m; uz /= m; // away from the road
-  const g = new THREE.Group(), pole = lam({ color: '#2a2a2e' });
-  for (const s of [-2.6, 2.6]) box(0.22, 6.4, 0.22, pole, s, 3.2, -0.2, g);
-  box(7.4, 3.5, 0.2, pole, 0, 5.6, -0.25, g);
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 3.3), new THREE.MeshBasicMaterial({ map: canvasTex(256, 118, (c, W, H) => {
-    c.fillStyle = '#1b2a4a'; c.fillRect(0, 0, W, H); c.fillStyle = '#ffcf3a'; c.fillRect(0, 0, W, 6); c.fillRect(0, H - 6, W, 6);
-    c.textAlign = 'center'; c.fillStyle = '#f2e8d2'; c.font = 'bold 16px monospace'; c.fillText('WELCOME TO', W / 2, 34);
-    c.fillStyle = '#ffcf3a'; c.font = 'bold 44px monospace'; c.fillText('TEX CITY', W / 2, 76);
-    c.fillStyle = '#f2e8d2'; c.font = 'bold 12px monospace'; c.fillText('KEDIRI STORIES', W / 2, 100);
+  let fx = ax - bx, fz = az - bz; const fm = Math.hypot(fx, fz) || 1; fx /= fm; fz /= fm; // screen normal: back down the street (south)
+  const rot = Math.atan2(fx, fz), s = (Math.cos(rot) * -ux - Math.sin(rot) * -uz) >= 0 ? 1 : -1; // local +x*s points over the road
+  const g = new THREE.Group();
+  const conc = lam({ map: canvasTex(32, 128, (c, W, H) => { c.fillStyle = '#b9bcbc'; c.fillRect(0, 0, W, H); noise(c, W, H, 18, 1); c.fillStyle = 'rgba(0,0,0,.12)'; for (let y = 10; y < H; y += 22) c.fillRect(0, y, W, 1); c.fillStyle = 'rgba(60,50,40,.18)'; c.fillRect(0, H - 14, W, 14); }) });
+  const red = lam({ color: '#c41e24' }), steel = lam({ color: '#5a5e62' }), dark = lam({ color: '#141416' });
+  const SW = 12, SH = 6.6, SY = 7.2, COL = 1.7, sx = s * (COL / 2 + SW / 2 + 0.25); // screen size, bottom height, column width
+  box(COL, 15.2, COL, conc, 0, 7.6, 0, g); box(COL + 0.3, 0.35, COL + 0.3, conc, 0, 15.2, 0, g); // column + cap
+  box(SW + 0.9, SH + 0.9, 0.7, red, sx, SY + SH / 2, 0, g); // red frame / cabinet
+  box(SW + 0.6, 0.25, 0.9, dark, sx, SY + SH + 0.55, 0, g);  // top service walkway
+  for (const k of [0.25, 0.75]) box(0.12, 0.12, 0.9, steel, s * (COL / 2 + 0.25 + SW * k), SY - 0.05, 0, g);
+  { const st = new THREE.Mesh(new THREE.BoxGeometry(0.28, 7.2, 0.28), steel); st.position.set(s * (COL / 2 + 2.3), SY - 2.4, 0.2); st.rotation.z = s * 0.62; g.add(st); } // diagonal strut
+  { const arm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 4.4), steel); arm.position.set(-s * 0.2, 13.2, 2.4 + COL / 2); g.add(arm); box(0.5, 0.22, 0.9, lam({ color: '#e8e6dc', emissive: '#6a6450' }), -s * 0.2, 13.05, 4.5 + COL / 2, g); } // street lamp arm
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), new THREE.MeshBasicMaterial({ map: canvasTex(480, 264, (c, W, H) => {
+    const body = H - 46;
+    const gr = c.createLinearGradient(0, 0, W, body); gr.addColorStop(0, '#3a2414'); gr.addColorStop(0.55, '#7a4a22'); gr.addColorStop(1, '#2a1a10'); c.fillStyle = gr; c.fillRect(0, 0, W, body);
+    c.fillStyle = 'rgba(255,214,140,.10)'; for (let i = 0; i < 7; i++) c.fillRect(30 + i * 64, 0, 26, body); // café interior light bands
+    c.fillStyle = '#f2e8d2'; c.fillRect(46, 64, 74, 92); c.fillStyle = '#6a3a1a'; c.fillRect(54, 72, 58, 20); // big cup
+    c.strokeStyle = '#f2e8d2'; c.lineWidth = 9; c.beginPath(); c.arc(124, 108, 20, -1.3, 1.3); c.stroke();
+    c.fillStyle = '#d9cfb8'; c.fillRect(30, 158, 106, 10);
+    c.strokeStyle = 'rgba(242,232,210,.6)'; c.lineWidth = 4; for (const dx of [62, 82, 102]) { c.beginPath(); c.moveTo(dx, 56); c.quadraticCurveTo(dx + 10, 40, dx, 24); c.stroke(); }
+    c.textAlign = 'left'; c.fillStyle = '#f2e8d2'; c.font = 'bold 22px monospace'; c.fillText('WELCOME TO', 170, 70);
+    c.fillStyle = '#ffcf3a'; c.font = 'bold 62px monospace'; c.fillText('TEX CITY', 166, 130);
+    c.fillStyle = '#f2e8d2'; c.font = 'bold 18px monospace'; c.fillText('KEDIRI STORIES', 172, 162);
+    c.fillStyle = '#c41e24'; c.fillRect(172, 176, 220, 4);
+    c.fillStyle = '#0c0c0c'; c.fillRect(0, body, W, H - body);
+    c.fillStyle = '#ffcf3a'; c.font = 'bold 14px monospace'; c.fillText('INFO KOTA', 12, body + 18);
+    c.fillStyle = '#e8e8e8'; c.font = '12px monospace'; c.fillText('NGOPI DULU DI TEXTURE COFFEE · JL. DR. WAHIDIN', 12, body + 36);
+    c.fillStyle = 'rgba(0,0,0,.18)'; for (let y = 0; y < H; y += 3) c.fillRect(0, y, W, 1); // LED scanlines
   }, false) }));
-  face.position.set(0, 5.6, -0.13); g.add(face);
-  g.position.set(x + ux * 1.6, groundY(x, z), z + uz * 1.6); g.rotation.y = Math.atan2(-ux, -uz); scene.add(g);
+  face.position.set(sx, SY + SH / 2, 0.36); g.add(face);
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), dark); back.position.set(sx, SY + SH / 2, -0.36); back.rotation.y = Math.PI; g.add(back);
+  const px = x + ux * 1.4, pz = z + uz * 1.4;
+  g.position.set(px, groundY(px, pz), pz); g.rotation.y = rot; scene.add(g);
+  addSolid(px - COL / 2 - 0.1, px + COL / 2 + 0.1, pz - COL / 2 - 0.1, pz + COL / 2 + 0.1);
   billboard = { g, spot: [x, z] };
   return billboard;
 }
-const tgt = (pt, o = {}) => ({ x: pt[0], z: pt[1], ...o });
+ensureBillboard(); // always standing on Jl. Dhoho, not only during T1
+// cells the player can actually walk to from Texture Coffee (flood fill over free cells with free 4-neighbours)
+let REACH = null;
+function reachMask() {
+  if (REACH) return REACH;
+  const n = GW * GH, ok = (k) => k >= 0 && !OCC[k], R = new Uint8Array(n), Q = new Int32Array(n);
+  const open = (k) => { const i = k % GW; return ok(k) && i > 0 && i < GW - 1 && ok(k - 1) && ok(k + 1) && ok(k - GW) && ok(k + GW); };
+  let h = 0, t = 0; const s = cellOf(SPOT.drop[0], SPOT.drop[1]);
+  if (s >= 0) { R[s] = 1; Q[t++] = s; }
+  while (h < t) { const k = Q[h++]; for (const m of [k - 1, k + 1, k - GW, k + GW]) if (m >= 0 && m < n && !R[m] && open(m)) { R[m] = 1; Q[t++] = m; } }
+  return (REACH = R);
+}
+function reachable(pt) { // nearest walkable spot to pt (pt itself when it already is)
+  const R = reachMask(), [x, z] = pt, k = cellOf(x, z);
+  if (k >= 0 && R[k]) return pt;
+  for (let d = 0.7; d < 40; d += 0.7) for (let a = 0; a < 16; a++) {
+    const px = x + Math.cos(a / 16 * 6.283) * d, pz = z + Math.sin(a / 16 * 6.283) * d, m = cellOf(px, pz);
+    if (m >= 0 && R[m]) return [px, pz];
+  }
+  return pt;
+}
+const tgt = (pt, o = {}) => { const [x, z] = reachable(pt); return { x, z, ...o }; };
 function posterTargets() { // 3 notice boards along Jl. Dhoho
   return boards.filter((b) => b.dhoho).map((b, i) =>
     tgt([b.x + b.nx * 1.4, b.z + b.nz * 1.4], { board: b, design: i % POSTERS.length, toast: 'Poster ditempel!' }));
@@ -1619,7 +1847,7 @@ const mapImg = document.createElement('canvas'); mapImg.width = GW; mapImg.heigh
   g.fillStyle = '#5b5a44'; g.fillRect(0, 0, GW, GH); g.setTransform(IMG_FROM_GAME); g.lineCap = 'round'; g.lineJoin = 'round';
   g.fillStyle = '#5e7a3e'; for (const pk of MAP.parks) { g.beginPath(); polyPath(g, pk.p); g.fill(); }
   g.fillStyle = '#3f7f9f'; for (const w of MAP.water) { g.beginPath(); polyPath(g, w.o); for (const h of w.h) polyPath(g, h); g.fill('evenodd'); }
-  g.fillStyle = '#8a7f6a'; for (const b of MAP.bld) { g.beginPath(); polyPath(g, b.p); g.fill(); }
+  g.fillStyle = '#8a7f6a'; for (const b of MAP.bld) { if (b.cut) continue; g.beginPath(); polyPath(g, b.p); g.fill(); }
   g.strokeStyle = '#3a3430'; g.lineWidth = 2.4; for (const r of MAP.rails) { g.beginPath(); linePath(g, r); g.stroke(); }
   for (const [test, col, extra] of [[(c) => c > 6, '#a89f8e', 0], [(c) => c > 3 && c <= 6, '#d8cfbc', 0], [(c) => c <= 3, '#3a3026', 3], [(c) => c <= 3, '#f2e2a8', 0]]) {
     g.strokeStyle = col; for (const r of MAP.roads) { if (!test(r.c)) continue; g.lineWidth = r.w + extra; g.beginPath(); linePath(g, r.p); g.stroke(); }
@@ -1921,7 +2149,7 @@ $('btnPlay').onclick = () => {
 // Shown every time the game starts; returning players can press SKIP INTRO.
 const INTRO_SPEAKER = 'Mas Tex';
 const INTRO_LINES = [
-  'Halo, selamat datang di TEX CITY! Kamu baru tiba di gerbang CFD Jalan Dhoho.',
+  'Halo, selamat datang di TEX CITY!',
   'Kota ini luas lho. Ada Jalan Dhoho, area Stasiun, sampai Pakelan di sekitar Texture Coffee. Jelajahi semuanya pelan-pelan.',
   'Cari penanda kuning. Itu tanda misi. Misinya berurutan, satu per satu, mulai dari perjalanan pertamamu di sini.',
   'Setiap misi dan aktivitas memberi kamu Tex Coins. Kumpulkan sebanyak-banyaknya!',
@@ -2239,6 +2467,12 @@ function update(dt) {
   // npcs
   for (const n of npcs) {
     drive(n, PED, (a) => a.side * (a.e.w / 2 + 0.9));
+    { // sidewalk runs into a wall: step in toward the street centre at once, drift back out slowly
+      const off = (f) => n.side * (n.e.w / 2 + 0.9) * f;
+      let want = 0; for (const f of [1, 0.6, 0.3]) { const [px, pz] = agentPos(n, off(f)); if (freeAt(px, pz, 0.35)) { want = f; break; } }
+      n.f = n.f == null || want < n.f ? want : n.f + (want - n.f) * Math.min(1, 2 * dt);
+      if (n.f < 0.999) [n.x, n.z] = agentPos(n, off(n.f));
+    }
     const x = n.x, z = n.z, far = Math.hypot(x - P.pos.x, z - P.pos.z) > 95;
     n.c.group.visible = !far; if (far) continue;
     n.c.group.position.set(x, groundY(x, z), z); n.c.group.rotation.y = n.h;
@@ -2332,5 +2566,5 @@ camera.position.set(20, 4, -2); camera.lookAt(20, 2, 10);
 updateHUD();
 loop();
 // debug handle (handy for QA in a background tab)
-window.__oot = { MAP, PLACES, TRAIN, NAMED, toGame, toOsm, heightAt, freeAt, openMap, cars, areaName, roadNameAt, boards, openPoster, get nearBoard() { return nearBoard; }, P, get bike() { return bike; }, bikes, riders, npcs, hitPlayer, cam, save, keys, startMission, finishMission, toggleBike, applyLook, player, MDEF, markers, refreshMarkers, MP, wallet, say, get active() { return active; },
+window.__oot = { MAP, get OCC() { return OCC; }, cellOf, EDGES, PLACES, TRAIN, NAMED, toGame, toOsm, heightAt, freeAt, openMap, cars, areaName, roadNameAt, boards, openPoster, get nearBoard() { return nearBoard; }, P, get bike() { return bike; }, bikes, riders, npcs, hitPlayer, cam, save, keys, startMission, finishMission, toggleBike, applyLook, player, MDEF, markers, refreshMarkers, MP, wallet, say, get active() { return active; },
   step(n = 1, dt = 1 / 30) { for (let i = 0; i < n; i++) { if (!paused()) update(dt); place(dt); } renderer.render(scene, camera); drawRadar(); } };
