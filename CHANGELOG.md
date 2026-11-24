@@ -3,6 +3,15 @@
 Grand Tex Avenue – Kediri Stories (TEX CITY). Versions follow `MAJOR.MINOR.PATCH`.
 The version lives in `VERSION`, `GAME_VERSION` in `main.js` and the `main.js?v=` tag in `index.html`.
 
+## [1.2.0] - 2026-11-24
+
+### Added
+- OOT Wardrobe is now a full-screen OUTOFTEX shop inside Texture Coffee: catalogue cards with product shots and prices, plus a separate 3D preview of the player (tap an item to try it on, drag to rotate). The menu never covers the player; on a portrait phone the preview sits on top.
+- Opening cutscene after PLAY, following the OOT "Garage Sale 11.11" video: OOT logo, sunset fly-in over Kediri, the player walking up to Texture Coffee, then the Grand Tex Avenue title card. SKIP goes straight to the dialogue.
+
+### Changed
+- The game now starts at Texture Coffee's front; respawn and the mission 1 marker moved there too.
+
 ## [1.1.0] - 2026-11-24
 
 ### Changed
