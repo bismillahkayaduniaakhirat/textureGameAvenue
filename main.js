@@ -1351,6 +1351,25 @@ function frontSpot(id, off = 3) { // standing spot in front of a named building
 }
 const llSpot = (ll) => kerbFront(...latLonToGame(ll[0], ll[1]));
 const SETONO = [-7.8163776, 112.0116698], ORION = [-7.8159821, 112.0142145];
+// named pins on the full map (client list). src: a NAMED building id, or [lat, lon]; null = location still unknown
+const MAP_PINS = [
+  ['ARIES MOTOR', 'aries'], ['STASIUN KEDIRI', 'stasiun'], ['TOKO KOPI RUKUN WARGA', null], ['ST 18', null],
+  ['HOTEL GRAND SURYA', 'surya'], ['SKDP', 'skdp'], ['TROPIS COFFEE', 'tropis'], ['SETIABUDI 6AM', 'setiabudi'],
+  ['ASTONISH', 'astonish'], ['WARKOP SOPO', 'sopo'], ['GIE KIE KONG SOE', [-7.8177181, 112.0110774]], ['SETONO GEDONG', SETONO],
+];
+let PIN_POS = null;
+function mapPins() { // resolved once: [name, x, z]
+  if (PIN_POS) return PIN_POS;
+  PIN_POS = [];
+  for (const [name, src] of MAP_PINS) {
+    if (!src) continue;
+    let x, z;
+    if (typeof src === 'string') { const nb = NAMED.find((n) => n.id === src); if (!nb) continue; if (nb.b) { x = nb.b.cx; z = nb.b.cz; } else [x, z] = latLonToGame(nb.ll[0], nb.ll[1]); }
+    else [x, z] = latLonToGame(src[0], src[1]);
+    PIN_POS.push([name, x, z]);
+  }
+  return PIN_POS;
+}
 function behindAries() {
   const nb = NAMED.find((n) => n.id === 'aries'), f = nb?.front, b = nb?.b;
   if (!f || !b) return dhoho(1);
@@ -2024,7 +2043,7 @@ function drawRadar() {
     radar.beginPath(); radar.arc(sx, sy, rad, 0, 7); radar.fill(); radar.stroke();
     if (label) { radar.fillStyle = '#000'; radar.font = 'bold 9px monospace'; radar.textAlign = 'center'; radar.fillText(label, sx, sy + 3); }
   };
-  for (const pl of PLACES) if (!active) dot(pl.x, pl.z, '#2ad1c2', 4);
+  if (!active) { for (const pl of PLACES) dot(pl.x, pl.z, '#2ad1c2', 4); for (const [, x, z] of mapPins()) dot(x, z, '#2ad1c2', 3); }
   if (TRAIN) for (const c of TRAIN.cars) if (c.visible) dot(c.position.x, c.position.z, '#d9622b', 2.5);
   dot(20, 12, '#b3262a', 6, true, 'T');
   { const nb = P.onBike ? null : bikes.reduce((a, b) => (Math.hypot(b.pos.x - px, b.pos.z - pz) < Math.hypot(a.pos.x - px, a.pos.z - pz) ? b : a));
@@ -2058,7 +2077,8 @@ function mapZoom(k, sx, sy) { // zoom around a screen point
 function drawMap() {
   const dpr = Math.min(2, devicePixelRatio || 1), W = mapCv.clientWidth, H = mapCv.clientHeight; if (!W || !H) return;
   if (mapCv.width !== Math.round(W * dpr) || mapCv.height !== Math.round(H * dpr)) { mapCv.width = Math.round(W * dpr); mapCv.height = Math.round(H * dpr); }
-  MV.cx = clamp(MV.cx, 0, GW); MV.cy = clamp(MV.cy, 0, GH);
+  { const hx = W / 2 / MV.zoom, hy = H / 2 / MV.zoom; // keep the map filling the view (centred when it is smaller)
+    MV.cx = GW > hx * 2 ? clamp(MV.cx, hx, GW - hx) : GW / 2; MV.cy = GH > hy * 2 ? clamp(MV.cy, hy, GH - hy) : GH / 2; }
   const z = MV.zoom, g = mctx;
   g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = '#4a4936'; g.fillRect(0, 0, W, H);
   g.setTransform(dpr * z, 0, 0, dpr * z, dpr * (W / 2 - MV.cx * z), dpr * (H / 2 - MV.cy * z)); g.imageSmoothingEnabled = z < 1.5; g.drawImage(mapImg, 0, 0);
@@ -2071,10 +2091,24 @@ function drawMap() {
     const seen = new Set();
     for (const rd of MAP.roads) { if (!rd.n || rd.c > 4 || seen.has(rd.n)) continue; const p = rd.p, k = Math.floor(p.length / 4) * 2; const [x, y] = toS(p[k], p[k + 1]); if (x < 0 || y < 0 || x > W || y > H) continue; seen.add(rd.n); label(prettyRoad(MAP.names[rd.n]), x, y + 4, '#ffe9a8', 10); }
   }
-  for (const l of MAP.lm) { if (l.id === 'texture') continue; const [x, y] = toS(l.x, l.z); g.fillStyle = '#fff'; g.beginPath(); g.arc(x, y, 3, 0, 7); g.fill(); label(l.id === 'plaza' ? 'PLAZA' : l.name, x, y - 7); }
+  const pins = mapPins(), pinned = new Set(pins.map((p) => p[0]));
+  for (const l of MAP.lm) { if (l.id === 'texture' || pinned.has(l.name)) continue; const [x, y] = toS(l.x, l.z); g.fillStyle = '#fff'; g.beginPath(); g.arc(x, y, 3, 0, 7); g.fill(); label(l.id === 'plaza' ? 'PLAZA' : l.name, x, y + 14); } // below the dot: pin labels sit above theirs
   if (!active) { for (const [id, m] of markers) pin(m.x, m.z, '#ffcf3a', mLabel(id), 7); }
   else if (active.stages[active.si]) { for (const t of active.stages[active.si]) if (!t.done) pin(t.x, t.z, '#ff3a2a', '', 6); }
-  for (const pl of PLACES) { const [x, y] = pin(pl.x, pl.z, '#2ad1c2', '', 6); if (Math.hypot(pl.x - 20, pl.z - 12) > 20 && z >= 1.2) label(pl.name.toUpperCase(), x, y - 10, '#9ff5ec', 10); }
+  { // partner places + named landmark pins; labels dodge each other (above, then below, else hidden until zoomed in)
+    const boxes = [], fits = (x, y, w) => !boxes.some((b) => Math.abs(b[0] - x) < (b[2] + w) / 2 + 2 && Math.abs(b[1] - y) < 12);
+    const all = PLACES.filter((pl) => Math.hypot(pl.x - 20, pl.z - 12) > 20).map((pl) => [pl.name.toUpperCase(), pl.x, pl.z]);
+    for (const p of pins) if (!all.some((a) => a[0] === p[0])) all.push(p);
+    for (const pl of PLACES) pin(pl.x, pl.z, '#2ad1c2', '', 6);
+    const dots = all.map(([, px, pz]) => pin(px, pz, '#2ad1c2', '', 6));
+    for (const [x, y] of dots) boxes.push([x, y + 4, 12]); // labels keep off the pins themselves
+    for (const [i, [name]] of all.entries()) {
+      const [x, y] = dots[i];
+      if (z < 0.4) continue;
+      g.font = 'bold 10px "Space Mono", monospace'; const w = g.measureText(name).width;
+      for (const ly of [y - 10, y + 18]) if (fits(x, ly, w)) { boxes.push([x, ly, w]); label(name, x, ly, '#9ff5ec', 10); break; }
+    }
+  }
   { const [x, y] = pin(20, 12, '#b3262a', 'T', 10); label('TEXTURE COFFEE', x, y + 24, '#ffcf3a', 12); }
   // player
   { const [x, y] = toS(P.pos.x, P.pos.z), h = P.onBike ? bike.heading : P.heading, sh = Math.sin(h), ch = Math.cos(h);

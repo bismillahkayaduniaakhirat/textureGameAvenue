@@ -20,7 +20,8 @@ OUT = os.path.join(HERE, '..', 'assets', 'kediri.json')
 LAT0, LON0 = -7.81925, 112.01125
 KX = 111320 * math.cos(math.radians(LAT0))
 KZ = 110540
-CROP = (-620, 1640, -560, 1000)  # x0, x1, z0, z1 in the OSM frame (metres); x1 was 940, widened east to Lastay Coffee
+CROP = (-330, 630, -560, 210)  # x0, x1, z0, z1 in the OSM frame (metres). Client play area: N = Jl. Dhoho north crossroads,
+# S = Sumur Bor crossroads, E = Stasiun Kediri, W = Warkop Sopo / Klenteng (was -620..1640 x -560..1000)
 TEXTURE = (-7.8198536, 112.0120063)  # Texture Coffee, Jl. Dr. Wahidin No.01, Pakelan
 
 CLS = {'trunk': 0, 'primary': 1, 'secondary': 2, 'tertiary': 3, 'unclassified': 4, 'residential': 5,
