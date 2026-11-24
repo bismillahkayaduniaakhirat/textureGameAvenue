@@ -382,6 +382,43 @@ const WALLC = WALLS.map(C), TILE = ['#9a4a2e', '#a85a34', '#8a3e28', '#7a4a3a'].
 const SIGN_ROWS = SHOP_NAMES.length;
 const signAtlas = canvasTex(128, 24 * SIGN_ROWS, (g, W) => { SHOP_NAMES.forEach((n, i) => { const [bg, fg] = SIGN_COLS[i % SIGN_COLS.length]; const y = i * 24; g.fillStyle = bg; g.fillRect(0, y, W, 24); g.fillStyle = fg; g.fillRect(2, y + 2, W - 4, 1); g.fillRect(2, y + 21, W - 4, 1); g.font = 'bold 13px monospace'; g.textAlign = 'center'; g.fillText(n, W / 2, y + 17); }); });
 signAtlas.minFilter = THREE.NearestFilter; signAtlas.generateMipmaps = false;
+// OSM footprints sometimes reach into the carriageway (Astonish sat 3 m into Jl. Dr. Setiabudi). Pull every corner that
+// lies on a road or its kerb strip back to the road edge + KERB, on the side where the building is, so no building
+// blocks a street. Footprints across a centre line are left alone (plain ones are dropped further down); one squeezed
+// below 6 m2 by the push is dropped (returns its new area).
+const pushOffRoad = (() => {
+  const KERB = 1.2, CELL = 24, grid = new Map(), key = (i, j) => i * 100003 + j;
+  for (const r of MAP.roads) {
+    if (r.c > 7) continue; const p = r.p, R = r.w / 2 + KERB;
+    for (let i = 0; i + 3 < p.length; i += 2) {
+      const s = [p[i], p[i + 1], p[i + 2], p[i + 3], R];
+      for (let a = Math.floor((Math.min(s[0], s[2]) - R) / CELL); a <= Math.floor((Math.max(s[0], s[2]) + R) / CELL); a++)
+        for (let b = Math.floor((Math.min(s[1], s[3]) - R) / CELL); b <= Math.floor((Math.max(s[1], s[3]) + R) / CELL); b++) { const k = key(a, b); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(s); }
+    }
+  }
+  return (p) => {
+    const n = p.length / 2; let cx = 0, cz = 0; for (let i = 0; i < p.length; i += 2) { cx += p[i]; cz += p[i + 1]; } cx /= n; cz /= n;
+    for (let it = 0; it < 3; it++) {
+      let moved = false;
+      for (let v = 0; v < p.length; v += 2) {
+        const segs = grid.get(key(Math.floor(p[v] / CELL), Math.floor(p[v + 1] / CELL))); if (!segs) continue;
+        for (const [ax, az, bx, bz, R] of segs) {
+          const dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz); if (L < 0.5) continue;
+          const t = ((p[v] - ax) * dx + (p[v + 1] - az) * dz) / (L * L); if (t < 0 || t > 1) continue;
+          let nx = -dz / L, nz = dx / L; const fx = ax + dx * t, fz = az + dz * t;
+          let side = (cx - fx) * nx + (cz - fz) * nz; if (side < 0) { nx = -nx; nz = -nz; side = -side; }
+          if (side < 0.5) continue; // centroid on the centre line: straddling footprint
+          const sd = (p[v] - fx) * nx + (p[v + 1] - fz) * nz;
+          if (sd < R && R - sd < 6) { p[v] += (R - sd) * nx; p[v + 1] += (R - sd) * nz; moved = true; }
+        }
+      }
+      if (!moved) break;
+    }
+    let a = 0; for (let i = 0, j = p.length - 2; i < p.length; j = i, i += 2) a += p[j] * p[i + 1] - p[i] * p[j + 1];
+    return Math.abs(a) / 2;
+  };
+})();
+for (const b of MAP.bld) if (pushOffRoad(b.p) < 6) b.cut = true;
 const BLD = MAP.bld.map((b) => { let cx = 0, cz = 0; const n = b.p.length / 2; for (let i = 0; i < b.p.length; i += 2) { cx += b.p[i]; cz += b.p[i + 1]; } return { ...b, cx: cx / n, cz: cz / n }; });
 // landmark buildings: nearest footprint to each OSM landmark point
 const LM = {}; for (const l of MAP.lm) LM[l.id] = l;
@@ -1892,6 +1929,11 @@ addEventListener('keydown', (e) => {
   if (e.code === 'Space') { jump(); e.preventDefault(); }
 });
 addEventListener('keyup', (e) => { keys[e.code] = false; });
+// a key released while the page has no focus (alt-tab, right-click menu) never sends keyup: drop all held input
+function releaseInput() { for (const k in keys) keys[k] = false; stick.x = stick.y = 0; stick.id = null; const kn = $('knob'); if (kn) kn.style.transform = ''; }
+addEventListener('blur', releaseInput);
+addEventListener('contextmenu', releaseInput);
+document.addEventListener('visibilitychange', () => { if (document.hidden) releaseInput(); });
 const stick = { x: 0, y: 0, id: null };
 let runToggle = false, jumpReq = false;
 {
@@ -2054,7 +2096,7 @@ function hitPlayer(dmg, kx, kz, msg, knockDown = dmg >= 30) {
 }
 // HP 0: WASTED screen, the player presses RESPAWN (no auto respawn). Coins, items and the active mission are kept.
 function faint() {
-  P.fainted = true; P.down = 99;
+  P.fainted = true; P.down = 99; releaseInput();
   if (P.onBike) { P.onBike = false; bike.speed = 0; $('btnEnter').textContent = 'MOTOR'; }
   $('wasted').classList.remove('hidden');
 }
@@ -2062,7 +2104,8 @@ function respawn() {
   if (!P.fainted) return;
   $('wasted').classList.add('hidden');
   const [gx, gz, gh] = homePos();
-  P.pos.set(gx, 0, gz); P.kx = P.kz = 0; P.vy = 0; P.hp = 100; P.down = 0; P.fall = 0; P.fainted = false; P.heading = gh;
+  P.pos.set(gx, 0, gz); P.kx = P.kz = 0; P.vy = 0; P.hp = 100; P.down = 0; P.fall = 0; P.fainted = false; P.heading = gh; P.speed = 0;
+  releaseInput(); runToggle = false; $('btnRun').classList.remove('on'); // respawn standing still
   cam.yaw = gh; P.lastHit = clock.elapsedTime; updateHUD(); toast('HP penuh lagi. Hati-hati di jalan!');
 }
 $('btnRespawn').onclick = respawn;
