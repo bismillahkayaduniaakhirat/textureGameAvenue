@@ -2832,6 +2832,7 @@ function mpJoin(room = 1) {
   const ch = NET.sb.channel(`texcity-${room}`, { config: { broadcast: { self: false }, presence: { key: MP.id } } });
   ch.on('broadcast', { event: 's' }, ({ payload }) => mpState(payload))
     .on('broadcast', { event: 'e' }, ({ payload }) => mpEmoteIn(payload))
+    .on('broadcast', { event: 'p' }, ({ payload }) => mpPunchIn(payload))
     .on('presence', { event: 'sync' }, mpSync)
     .subscribe((st) => { if (st === 'SUBSCRIBED') { ch.track({ n: MP.name, t: MP.t0 }); MP.last = ''; MP.sendT = 0; } });
   MP.ch = ch;
@@ -2861,6 +2862,7 @@ function mpState(p) {
   Object.assign(pr, { tx: p.x, tz: p.z, ty: +p.y || 0, th: +p.h || 0, spd: +p.s || 0, onBike: !!p.b, ev: +p.b === 2, seen: performance.now() });
   const ek = JSON.stringify(p.eq || {}); if (ek !== pr.eqKey) { pr.eqKey = ek; applyLook(pr.c, sanitizeEq(p.eq)); }
   const name = String(p.n || 'Pemain').slice(0, 24), hp = clamp(Math.round(+p.hp || 0), 0, 100), nk = name + '|' + hp;
+  pr.name = name;
   if (nk !== pr.nameKey) { pr.nameKey = nk; setPeerLabel(pr, name, hp); }
 }
 function setPeerLabel(pr, name, hp) { // name + HP bar, no background box
@@ -2932,9 +2934,111 @@ function mpUpdate(dt) {
       g.position.set(pr.x, pr.y, pr.z); g.rotation.set(0, pr.h, 0);
       if (!far) animChar(pr.c, pr.spd, dt);
     }
-    if (!far) emotePose(pr.c, dt);
+    if (!far) { emotePose(pr.c, dt); punchPose(pr.c, dt); }
   }
 }
+
+/* ---------------- fighting: punch NPCs and other players ---------------- */
+// Q / PUKUL: a short jab. NPCs flinch, fall after 3 hits and get angry: they chase and hit back until the player
+// gets ~16 m away (or rides off). Other players are hit through the room channel. No fighting in the safe zones.
+const FIGHT = { reach: 1.7, npcHp: 3, npcDmg: 8, pvpDmg: 10, giveUp: 16, safeR: 14, chase: 5.2 };
+function safeZone(x, z) { // Texture Coffee and the start crossroads
+  const [hx, hz] = homePos();
+  return Math.hypot(x - TEXTURE_HEAL[0], z - TEXTURE_HEAL[1]) < FIGHT.safeR || Math.hypot(x - hx, z - hz) < FIGHT.safeR;
+}
+let actx = null;
+function thud(vol = 0.5) { // short punch sound: a noise burst through a low-pass filter
+  if (save.muted) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const n = Math.floor(actx.sampleRate * 0.12), buf = actx.createBuffer(1, n, actx.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3);
+    const src = actx.createBufferSource(), f = actx.createBiquadFilter(), g = actx.createGain();
+    src.buffer = buf; f.type = 'lowpass'; f.frequency.value = 900; g.gain.value = vol;
+    src.connect(f).connect(g).connect(actx.destination); src.start();
+  } catch { /* no audio */ }
+}
+const angryTex = canvasTex(64, 64, (g) => {
+  g.fillStyle = '#fff'; g.beginPath(); g.arc(32, 28, 24, 0, 7); g.fill(); g.beginPath(); g.moveTo(26, 48); g.lineTo(32, 62); g.lineTo(38, 48); g.fill();
+  g.fillStyle = '#d2201c'; g.font = 'bold 36px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('!', 32, 30);
+}, false);
+function setAngry(c, on) {
+  if (on && !c.angry) { c.angry = new THREE.Sprite(new THREE.SpriteMaterial({ map: angryTex, depthWrite: false, transparent: true })); c.angry.scale.setScalar(0.7); c.angry.position.y = 3.0; c.group.add(c.angry); }
+  if (c.angry) c.angry.visible = on;
+}
+function punchPose(c, dt) { // jab with the right arm (guard up with the left); lean back when hit
+  const p = c.parts;
+  if (c.punchT > 0) {
+    c.punchT -= dt; const t = 1 - Math.max(0, c.punchT) / 0.35;
+    const ext = t < 0.3 ? 0 : t < 0.55 ? (t - 0.3) / 0.25 : Math.max(0, 1 - (t - 0.55) / 0.45);
+    p.armR.rotation.x = lerp(-0.7, -1.6, ext); p.elbowR.rotation.x = lerp(-2.1, -0.1, ext);
+    p.armL.rotation.x = -0.9; p.elbowL.rotation.x = -1.9;
+    p.torso.rotation.y = lerp(0.25, -0.35, ext);
+  }
+  if (c.flinchT > 0) { c.flinchT -= dt; const k = Math.min(1, c.flinchT / 0.4); p.torso.rotation.x = -0.35 * k; p.head.rotation.x = -0.4 * k; }
+}
+function punch() {
+  if (!started || paused() || DLG.on || P.onBike || P.down > 0 || P.fainted || player.punchT > 0) return;
+  if (safeZone(P.pos.x, P.pos.z)) { toast('Zona aman. Di sini nggak boleh mukul.', 1400); return; }
+  player.punchT = 0.35; P.punchAt = 0.12; sfx('whoosh', 0.25);
+}
+const inFront = (x, z) => { // inside the jab's reach, roughly in front of the player
+  const dx = x - P.pos.x, dz = z - P.pos.z, d = Math.hypot(dx, dz);
+  return d < FIGHT.reach && (d < 0.3 || (dx * Math.sin(P.heading) + dz * Math.cos(P.heading)) / d > 0.45) ? d : null;
+};
+function hitNpc(n) {
+  const dx = n.x - P.pos.x, dz = n.z - P.pos.z, d = Math.hypot(dx, dz) || 1;
+  if (!n.fight) { n.fight = true; n.ret = 0; n.fall = 0; n.c.group.rotation.order = 'YXZ'; }
+  n.hp = (n.hp ?? FIGHT.npcHp) - 1; n.c.flinchT = 0.4; n.kx = dx / d * 5; n.kz = dz / d * 5; n.atkT = 0.7; n.hitAt = 0;
+  if (n.hp <= 0) { n.mood = 'down'; n.downT = 3.5; setAngry(n.c, false); } else { n.mood = 'angry'; setAngry(n.c, true); }
+  for (const o of npcs) if (o !== n && !o.fight && Math.hypot(o.x - n.x, o.z - n.z) < 12) o.scare = 4; // bystanders hurry away
+  thud(0.6);
+}
+function fightUpdate(dt) {
+  if (!(P.punchAt > 0)) return;
+  P.punchAt -= dt; if (P.punchAt > 0) return;
+  let best = null, bd = 9;
+  for (const n of npcs) { if (!n.c.group.visible || n.mood === 'down' || n.mood === 'getup') continue; const d = inFront(n.x, n.z); if (d != null && d < bd) { bd = d; best = { n }; } }
+  for (const [id, pr] of MP.peers) { if (pr.onBike || !pr.c.group.visible || safeZone(pr.x, pr.z)) continue; const d = inFront(pr.x, pr.z); if (d != null && d < bd) { bd = d; best = { id, pr }; } }
+  if (best?.pr) { best.pr.c.flinchT = 0.4; thud(0.6); }
+  if (best?.n) hitNpc(best.n);
+  MP.ch?.send({ type: 'broadcast', event: 'p', payload: { id: MP.id, t: best?.id || null, x: +P.pos.x.toFixed(2), z: +P.pos.z.toFixed(2) } });
+}
+function npcFight(n, dt) { // an NPC that was hit: knocked back, angry (chases + hits back), down, or getting up
+  const c = n.c, dx = P.pos.x - n.x, dz = P.pos.z - n.z, d = Math.hypot(dx, dz) || 1;
+  const step = (vx, vz) => { const nx = n.x + vx * dt, nz = n.z + vz * dt; if (freeAt(nx, nz, 0.3)) { n.x = nx; n.z = nz; } };
+  step(n.kx, n.kz); const k = Math.exp(-6 * dt); n.kx *= k; n.kz *= k;
+  let spd = 0;
+  if (n.mood === 'down') { n.fall = lerp(n.fall, 1, Math.min(1, 9 * dt)); n.downT -= dt; if (n.downT <= 0) { n.mood = 'getup'; n.downT = 0.8; } }
+  else if (n.mood === 'getup') { n.fall = lerp(n.fall, 0, Math.min(1, 6 * dt)); n.downT -= dt; if (n.downT <= 0) { n.hp = FIGHT.npcHp; n.mood = 'calm'; } }
+  else if (n.mood === 'angry') {
+    if (d > FIGHT.giveUp || P.fainted || P.onBike || safeZone(P.pos.x, P.pos.z)) n.mood = 'calm';
+    else {
+      n.h = angLerp(n.h, Math.atan2(dx, dz), Math.min(1, 8 * dt));
+      if (d > 1.15 && !(c.punchT > 0)) { spd = FIGHT.chase; step(dx / d * spd, dz / d * spd); }
+      n.atkT -= dt;
+      if (d < 1.45 && n.atkT <= 0 && P.down <= 0) { c.punchT = 0.35; n.atkT = 1.2; n.hitAt = 0.13; }
+    }
+  }
+  if (n.hitAt > 0) { n.hitAt -= dt; if (n.hitAt <= 0 && n.mood === 'angry' && d < 1.8) { thud(0.5); hitPlayer(FIGHT.npcDmg, dx / d * 4, dz / d * 4, 'Dipukul balik!', false); } }
+  if (n.mood === 'calm') { n.fight = false; n.ret = 1; n.fx = n.x; n.fz = n.z; setAngry(c, false); }
+  c.group.position.set(n.x, groundY(n.x, n.z) + n.fall * 0.12, n.z); c.group.rotation.set(-n.fall * 1.45, n.h, 0);
+  animChar(c, spd, dt); punchPose(c, dt);
+}
+function mpPunchIn(p) {
+  const pr = p && MP.peers.get(p.id); if (!pr) return;
+  pr.c.punchT = 0.35;
+  if (!p.t) return;
+  if (p.t !== MP.id) { const tg = MP.peers.get(p.t); if (tg) tg.c.flinchT = 0.4; return; }
+  const now = clock.elapsedTime; if (now - (pr.lastPunch ?? -9) < 0.4) return; pr.lastPunch = now; // rate limit per attacker
+  const ax = +p.x, az = +p.z; if (!Number.isFinite(ax) || !Number.isFinite(az)) return;
+  if (P.onBike || P.fainted || safeZone(P.pos.x, P.pos.z) || Math.hypot(P.pos.x - ax, P.pos.z - az) > 3.5) return;
+  const dx = P.pos.x - ax, dz = P.pos.z - az, d = Math.hypot(dx, dz) || 1;
+  player.flinchT = 0.4; thud(0.6);
+  hitPlayer(FIGHT.pvpDmg, dx / d * 4, dz / d * 4, `Dipukul ${pr.name || 'pemain lain'}!`, false);
+}
+addEventListener('keydown', (e) => { if (e.code === 'KeyQ' && !e.repeat) punch(); });
+$('btnPunch').addEventListener('pointerdown', (e) => { e.stopPropagation(); punch(); });
 
 /* ---------------- update loop ---------------- */
 const clock = new THREE.Clock();
@@ -3035,18 +3139,31 @@ function update(dt) {
 
   // npcs
   for (const n of npcs) {
+    if (n.fight) {
+      if (Math.hypot(n.x - P.pos.x, n.z - P.pos.z) > 95) { n.fight = false; n.mood = 'calm'; n.ret = 0; n.fall = 0; setAngry(n.c, false); }
+      else { npcFight(n, dt); continue; }
+    }
+    const s0 = n.spd; if (n.scare > 0) { n.scare -= dt; n.spd = s0 * 3; }
     drive(n, PED, (a) => a.side * (a.e.w / 2 + 0.9));
+    const runSpd = n.spd; n.spd = s0;
     { // sidewalk runs into a wall: step in toward the street centre at once, drift back out slowly
       const off = (f) => n.side * (n.e.w / 2 + 0.9) * f;
       let want = 0; for (const f of [1, 0.6, 0.3]) { const [px, pz] = agentPos(n, off(f)); if (freeAt(px, pz, 0.35)) { want = f; break; } }
       n.f = n.f == null || want < n.f ? want : n.f + (want - n.f) * Math.min(1, 2 * dt);
       if (n.f < 0.999) [n.x, n.z] = agentPos(n, off(n.f));
     }
-    const x = n.x, z = n.z, far = Math.hypot(x - P.pos.x, z - P.pos.z) > 95;
+    let x = n.x, z = n.z, hh = n.h;
+    if (n.ret > 0) { // walking back from a fight to its sidewalk route
+      n.ret = Math.max(0, n.ret - dt / 1.6);
+      const gx = x, gz = z; x = lerp(x, n.fx, n.ret); z = lerp(z, n.fz, n.ret);
+      if (Math.hypot(gx - x, gz - z) > 0.2) hh = Math.atan2(gx - x, gz - z);
+    }
+    const far = Math.hypot(x - P.pos.x, z - P.pos.z) > 95;
     n.c.group.visible = !far; if (far) continue;
-    n.c.group.position.set(x, groundY(x, z), z); n.c.group.rotation.y = n.h;
-    animChar(n.c, n.spd, dt);
+    n.c.group.position.set(x, groundY(x, z), z); n.c.group.rotation.set(0, hh, 0);
+    animChar(n.c, n.ret > 0 ? Math.max(runSpd, 1.4) : runSpd, dt); punchPose(n.c, dt);
   }
+  fightUpdate(dt);
 
   // mission start markers
   if (!active && !DLG.on) {
@@ -3091,7 +3208,7 @@ function place(dt) {
     animChar(player, P.grounded && P.down <= 0 ? P.speed : 0, dt);
     if (!P.grounded && P.down <= 0) { const pp = player.parts; pp.legL.rotation.x = -0.6; pp.legR.rotation.x = 0.3; pp.kneeL.rotation.x = 0.9; pp.kneeR.rotation.x = 0.4; pp.armL.rotation.x = pp.armR.rotation.x = -2.4; pp.elbowL.rotation.x = pp.elbowR.rotation.x = -0.3; }
   }
-  emotePose(player, dt);
+  emotePose(player, dt); punchPose(player, dt);
   for (const s of SPARKLES) s.rotation.y += dt * 1.6;
   for (const b of bikes) { b.group.position.copy(b.pos); b.group.rotation.set(0, b.heading, 0); b.group.rotateZ(b.lean); }
 

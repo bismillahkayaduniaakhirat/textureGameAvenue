@@ -42,6 +42,7 @@ body.touch #actBtns{display:grid;grid-template-columns:repeat(2,auto);gap:10px;p
 #btnEnter{grid-column:2;grid-row:1}
 #btnRun{grid-column:2;grid-row:2}
 #btnJump{grid-column:1;grid-row:2}
+#btnPunch{grid-column:1;grid-row:1}
 body.touch #keysHint{display:none}
 body.touch #radarWrap{width:110px;height:110px;bottom:auto;top:56px}
 
