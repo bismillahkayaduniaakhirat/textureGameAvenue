@@ -435,7 +435,7 @@ const NAMED = [
   { id: 'aries', name: 'ARIES MOTOR', ll: [-7.8156213, 112.0135838], kind: 'showroom', wall: '#e9eef2', roof: '#8a8f96', accent: '#c8102e', fg: '#fff', h: 9 },
   { id: 'skdp', name: 'SKDP.', ll: [-7.8178821, 112.0128239], kind: 'cafe', wall: '#2e2c2a', roof: '#3a3634', accent: '#f2e8d2', fg: '#1a1a1a', h: 8 },
   { id: 'surya', name: 'GRAND SURYA', ll: [-7.817707, 112.0132129], kind: 'hotel', street: 'Jalan Dhoho', wall: '#e2e0da', roof: '#9a978f', accent: '#8a1f1f', fg: '#ffd86a', h: 9, hx: 9 },
-  { id: 'tropis', name: 'TROPIS COFFEE', ll: [-7.8190061, 112.0106658], pick: [-136.3, -58.5], kind: 'cafe', wall: '#a9a69c', roof: '#9c5a3c', accent: '#ffd86a', fg: '#1d3a22', h: 3.6, hx: 3.6 },
+  { id: 'tropis', name: 'TROPIS COFFEE', ll: [-7.8190061, 112.0106658], pick: [-136.3, -58.5], street: 'Jalan Dokter Setiabudi', kind: 'cafe', wall: '#a9a69c', roof: '#9c5a3c', accent: '#ffd86a', fg: '#1d3a22', h: 3.6, hx: 3.6 },
   { id: 'setiabudi', name: 'SETIABUDI 6AM', ll: [-7.8187911, 112.0107452], kind: 'cafe', street: 'Jalan Dokter Setiabudi', wall: '#f0ece2', roof: '#6a625c', accent: '#1f3a5a', fg: '#fff', h: 6 },
   { id: 'astonish', name: 'ASTONISH', ll: [-7.8199108, 112.0106423], kind: 'cafe', wall: '#222', roof: '#3a3634', accent: '#e9c46a', fg: '#1a1a1a', h: 6 },
   { id: 'sopo', name: 'WARKOP SOPO 1970', ll: [-7.8178701, 112.0100124], kind: 'warkop', wall: '#8a5a32', roof: '#7a3e28', accent: '#f6d36b', fg: '#3a1e0e', h: 5 },
@@ -1273,16 +1273,108 @@ const jerseyMap = CHAR_MATS.shirt.map;
 const teeMap = canvasTex(32, 32, (g, w, h) => { g.fillStyle = '#e9e7e2'; g.fillRect(0, 0, w, h); noise(g, w, h, 22, 2); });
 const glbTex = (t) => { t.flipY = false; t.needsUpdate = true; return t; }; // same UV orientation as the textures inside the glb
 // shirt texture 256x160: rows 0..128 torso (row 0 = collar), front centred on u 128, rows 128..160 sleeves
-const teePrint = (bg, fg, txt, sub) => glbTex(canvasTex(256, 160, (g, w, h) => {
+// OOT mark: two dots + the slanted T (as on the neck label, tags and patches)
+function ootLogo(g, x, y, s, col) {
+  g.fillStyle = col;
+  g.beginPath(); g.arc(x - 0.95 * s, y + 0.42 * s, 0.26 * s, 0, 7); g.fill();
+  g.beginPath(); g.arc(x - 0.38 * s, y + 0.36 * s, 0.34 * s, 0, 7); g.fill();
+  g.beginPath(); g.moveTo(x - 0.25 * s, y - 0.25 * s); g.lineTo(x + 0.75 * s, y - 0.62 * s); g.quadraticCurveTo(x + 1.05 * s, y - 0.4 * s, x + 0.85 * s, y - 0.12 * s);
+  g.lineTo(x + 0.45 * s, y - 0.02 * s); g.lineTo(x + 0.42 * s, y + 0.62 * s); g.lineTo(x + 0.02 * s, y + 0.62 * s); g.lineTo(x + 0.02 * s, y + 0.05 * s); g.lineTo(x - 0.2 * s, y + 0.08 * s); g.closePath(); g.fill();
+}
+// plaid oval patch of "Piece Noir": khaki twill, white + navy checks, red mark, navy edge
+function plaidPatch(g, cx, cy, rx, ry) {
+  g.save(); g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, 7); g.clip();
+  g.fillStyle = '#b3a26a'; g.fillRect(cx - rx, cy - ry, rx * 2, ry * 2);
+  g.fillStyle = '#f1efe6'; for (let x = cx - rx + rx * 0.22; x < cx + rx; x += rx * 0.36) g.fillRect(Math.round(x), cy - ry, Math.max(1, Math.round(rx * 0.09)), ry * 2);
+  g.fillStyle = '#263066'; for (const f of [-0.35, 0.3]) g.fillRect(cx - rx, Math.round(cy + f * ry), rx * 2, Math.max(1, Math.round(ry * 0.13)));
+  ootLogo(g, cx + rx * 0.08, cy, ry * 0.62, '#a8282c');
+  g.restore(); g.strokeStyle = '#263066'; g.lineWidth = Math.max(1, ry * 0.1); g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, 7); g.stroke();
+}
+// "Chronique": rust line drawing of a monobloc chair on the left chest
+function chairArt(g, x, y, s, col) {
+  g.strokeStyle = col; g.lineWidth = Math.max(1, s * 0.06); g.lineJoin = 'round';
+  const P = (pts) => { g.beginPath(); pts.forEach(([a, b], i) => (i ? g.lineTo(x + a * s, y + b * s) : g.moveTo(x + a * s, y + b * s))); g.stroke(); };
+  P([[-0.3, 0.05], [-0.38, -0.45], [-0.1, -0.62], [0.3, -0.55], [0.38, -0.1], [0.3, 0.08]]); // backrest
+  P([[-0.2, -0.35], [0.2, -0.3]]); P([[-0.18, -0.25], [0.15, -0.21]]);                        // slots
+  P([[-0.45, 0.05], [0.42, 0.08], [0.5, 0.25], [-0.38, 0.22], [-0.45, 0.05]]);               // seat
+  P([[-0.42, 0.22], [-0.5, 0.75], [0.5, 0.75], [0.48, 0.25]]); P([[-0.5, 0.75], [-0.1, 0.55], [0.5, 0.75]]); // legs
+}
+const teePrint = (bg, art) => glbTex(canvasTex(256, 160, (g, w, h) => {
   g.fillStyle = bg; g.fillRect(0, 0, w, h); noise(g, w, h, 14, 2);
-  g.fillStyle = fg; g.textAlign = 'center'; g.font = 'bold 14px monospace'; g.fillText(txt, 128, 46);
-  g.font = 'bold 7px monospace'; g.fillText(sub, 128, 58);
-  g.globalAlpha = 0.5; g.fillRect(0, 0, w, 3); g.fillRect(0, 154, w, 6); g.globalAlpha = 1;
+  art(g);
+  g.fillStyle = '#000'; g.globalAlpha = 0.18; g.fillRect(0, 0, w, 3); g.fillRect(0, 154, w, 6); g.globalAlpha = 1;
+  g.fillStyle = '#a8282c'; g.fillRect(186, 112, 5, 12); // woven red side tab
 }));
 const LOOK_TEX = {
-  s2_tee_black: teePrint('#17171a', '#eeeae2', 'PIECE NOIR', 'OUTOFTEX SS26'),
-  s2_tee_white: teePrint('#efede8', '#1a1a1a', 'CHRONIQUE', 'OUTOFTEX SS26'),
+  s2_tee_black: teePrint('#141416', (g) => plaidPatch(g, 128, 46, 17, 9)),
+  s2_tee_white: teePrint('#f1f0ec', (g) => chairArt(g, 146, 38, 13, '#b4563a')),
 };
+// ---- merch props, modelled on the product shots (scaled up a little so they read in game)
+const MERCH_MAT = {};
+const mm = (k, o) => (MERCH_MAT[k] ??= lam(o));
+function makeShades(id) { // chunky rectangular "Vue Seche": clear smoke frame + dark lens, or burnt amber frame + amber lens
+  const amber = id === 's1_sun_amber', g = new THREE.Group();
+  const fr = amber ? mm('fA', { color: '#8c4210', emissive: '#2a1004', transparent: true, opacity: 0.9 }) : mm('fG', { color: '#dfe2e3', emissive: '#3a3c3e', transparent: true, opacity: 0.62 });
+  const ln = amber ? mm('lA', { color: '#b8782e', emissive: '#3a2208', transparent: true, opacity: 0.85 }) : mm('lG', { color: '#121418', transparent: true, opacity: 0.94 });
+  const pin = mm('pin', { color: '#cfd3d6', emissive: '#555' });
+  const b = (w, h, d, m, x, y, z) => box(w, h, d, m, x, y, z, g);
+  for (const s of [-1, 1]) {
+    const cx = s * 0.046;
+    b(0.084, 0.014, 0.02, fr, cx, 0.02, 0); b(0.084, 0.014, 0.02, fr, cx, -0.02, 0);
+    b(0.014, 0.054, 0.02, fr, cx + s * 0.035, 0, 0); b(0.014, 0.054, 0.02, fr, cx - s * 0.035, 0, 0);
+    b(0.058, 0.028, 0.006, ln, cx, 0, 0.002);
+    b(0.01, 0.013, 0.13, fr, s * 0.093, 0.012, -0.062);                       // temple
+    b(0.006, 0.006, 0.004, pin, s * 0.082, 0.02, 0.011); b(0.006, 0.006, 0.004, pin, s * 0.082, 0.005, 0.011); // hinge rivets
+  }
+  return g;
+}
+const ropeTex = canvasTex(16, 64, (g) => { g.fillStyle = '#f2f0ea'; g.fillRect(0, 0, 16, 64); g.fillStyle = '#141416'; for (let y = 0; y < 64; y += 4) g.fillRect(0, y, 16, 2); });
+const coilTex = (c) => canvasTex(8, 32, (g) => { g.fillStyle = c; g.fillRect(0, 0, 8, 32); g.fillStyle = 'rgba(0,0,0,.25)'; for (let y = 3; y < 32; y += 4) g.fillRect(0, y, 8, 1); });
+const cdTex = canvasTex(64, 64, (g) => { // mini CD case "Accroche Crue"
+  g.fillStyle = '#dfe2e2'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#efe7cf'; g.fillRect(2, 2, 10, 60);
+  g.fillStyle = '#5a1414'; g.fillRect(14, 6, 46, 52);
+  g.fillStyle = '#8e2420'; g.beginPath(); g.arc(37, 32, 21, 0, 7); g.fill(); g.fillStyle = '#c9cdd2'; g.beginPath(); g.arc(37, 32, 4, 0, 7); g.fill();
+  g.fillStyle = '#f3e9d6'; g.font = 'bold 7px monospace'; g.textAlign = 'center'; g.fillText('ACCROCHE', 37, 20); g.fillText('CRUE', 37, 27);
+  ootLogo(g, 52, 14, 4, '#e08a2c');
+});
+const teeCharmTex = canvasTex(64, 64, (g) => { // black enamel tee charm with the plaid patch
+  g.clearRect(0, 0, 64, 64); g.fillStyle = '#c9ccd0';
+  const tee = (o) => { g.beginPath(); g.moveTo(22 - o, 8 - o); g.lineTo(6 - o, 18); g.lineTo(12, 30 + o); g.lineTo(16, 28); g.lineTo(16, 58 + o); g.lineTo(48, 58 + o); g.lineTo(48, 28); g.lineTo(52, 30 + o); g.lineTo(58 + o, 18); g.lineTo(42 + o, 8 - o); g.quadraticCurveTo(32, 16, 22 - o, 8 - o); g.closePath(); g.fill(); };
+  tee(1.5); g.fillStyle = '#121214'; tee(0); plaidPatch(g, 32, 26, 7, 4);
+});
+function makeKeychain(id) { // silver carabiner + rope loop with ring coil + red OOT tag + charm (S1: mini CD case, S2: tee)
+  const s1 = id === 's1_key', g = new THREE.Group();
+  const metal = mm('metal', { color: '#cfd2d6', emissive: '#4a4c50' });
+  const cara = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.006, 6, 16), metal); cara.scale.set(1, 1.7, 1); g.add(cara);
+  box(0.012, 0.03, 0.012, metal, 0.03, 0.012, 0, g);                                                  // screw gate
+  const rope = new THREE.Mesh(new THREE.TorusGeometry(0.036, 0.009, 6, 16), s1 ? mm('ropeS1', { map: ropeTex }) : mm('ropeS2', { color: '#18181b' }));
+  rope.scale.set(1, 2.2, 1); rope.position.y = -0.14; g.add(rope);
+  const coil = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.05, 8), mm(s1 ? 'coilS1' : 'coilS2', { map: coilTex(s1 ? '#ebe2c6' : '#bdbab1') })); coil.position.y = -0.07; g.add(coil);
+  box(0.036, 0.052, 0.007, mm('tag', { color: '#b3262a', emissive: '#2a0606' }), 0.045, -0.085, 0, g);  // red rubber tag
+  const charm = new THREE.Mesh(new THREE.PlaneGeometry(0.052, 0.052), s1 ? mm('cd', { map: cdTex, side: THREE.DoubleSide }) : mm('teeCharm', { map: teeCharmTex, side: THREE.DoubleSide, transparent: true, alphaTest: 0.4 }));
+  charm.position.set(-0.048, -0.085, 0); g.add(charm);
+  if (s1) box(0.054, 0.054, 0.008, mm('case', { color: '#e8ecee', transparent: true, opacity: 0.35 }), -0.048, -0.085, 0, g);
+  g.rotation.y = Math.PI / 2; // charms face outward from the hip
+  return g;
+}
+const steelTex = canvasTex(64, 64, (g) => { // brushed steel body, white OOT mark low on the front
+  for (let x = 0; x < 64; x++) { const v = 150 + 55 * Math.cos((x / 64) * Math.PI * 2 - Math.PI) ** 2 + (Math.random() * 10 - 5); g.fillStyle = `rgb(${v},${v + 2},${v + 5})`; g.fillRect(x, 0, 1, 64); }
+  g.save(); g.translate(16, 50); g.scale(0.7, 0.7); ootLogo(g, 0, 0, 6, '#ffffff'); g.restore();
+});
+const marbleTex = canvasTex(32, 32, (g) => {
+  g.fillStyle = '#16305e'; g.fillRect(0, 0, 32, 32);
+  for (let i = 0; i < 9; i++) { g.strokeStyle = ['#f4f6fa', '#2f7ad8', '#0b1a38'][i % 3]; g.lineWidth = 1 + (i % 2); g.beginPath(); g.moveTo(0, i * 4); g.bezierCurveTo(10, i * 4 - 6, 20, i * 4 + 8, 32, i * 4 - 2); g.stroke(); }
+});
+function makeTumbler() { // "Achier Recyclee": stainless bottle, stainless cap with marbled blue lid + loop handle
+  const g = new THREE.Group(), metal = mm('metal', { color: '#cfd2d6', emissive: '#4a4c50' });
+  const prof = [[0, 0], [0.036, 0], [0.04, 0.006], [0.04, 0.15], [0.034, 0.17], [0.026, 0.182], [0.026, 0.192], [0, 0.192]].map(([r, y]) => new THREE.Vector2(r, y));
+  g.add(new THREE.Mesh(new THREE.LatheGeometry(prof, 14), mm('steel', { map: steelTex, emissive: '#222' })));
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.026, 14), metal); cap.position.y = 0.205; g.add(cap);
+  const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.031, 0.031, 0.008, 14), [mm('marbleS', { color: '#2a5aa8' }), mm('marble', { map: marbleTex }), mm('marbleS', {})]); lid.position.y = 0.222; g.add(lid);
+  const loop = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.003, 4, 12, Math.PI), metal); loop.position.y = 0.222; g.add(loop);
+  g.rotation.y = -Math.PI / 2; // logo faces out of the left hand
+  return g;
+}
 // gear texture 128x64: u 0..32 sock, u 32..128 shoe ring (sole at both ends of the ring), v heel -> toe
 const sneakerMap = glbTex(canvasTex(128, 64, (g) => {
   g.fillStyle = '#efede7'; g.fillRect(0, 0, 32, 64); g.fillStyle = '#dcdad4'; for (let x = 0; x < 32; x += 3) g.fillRect(x, 0, 1, 64);
@@ -1313,19 +1405,14 @@ function applyLook(c, eq = {}) {
   sm.map = eq.outfit === 's1_jersey' ? jerseyMap : LOOK_TEX[eq.outfit] || teeMap; sm.color.set('#ffffff'); sm.needsUpdate = true;
   p.shorts.material.map = denimMap; p.shorts.material.color.set('#ffffff'); p.shorts.material.needsUpdate = true; // light-blue denim jorts
   if (p.gear) { p.gear.material.map = sneakerMap; p.gear.material.color.set('#ffffff'); p.gear.material.needsUpdate = true; }
-  p.glasses.visible = !!eq.eyewear;
-  if (eq.eyewear) p.glasses.traverse((m) => { if (m.isMesh && /lens/i.test(m.material.name)) m.material.color.set(eq.eyewear === 's1_sun_amber' ? '#c8701e' : '#3c4046'); });
+  p.glasses.visible = false; // the crowd's generic shades; merch eyewear is its own model below
   if (p.acc) for (const a of p.acc) { a.parent?.remove(a); SPARKLES.delete(a); }
   p.acc = [];
   const add = (o, parent, x, y, z) => { o.position.set(x, y, z); parent.add(o); p.acc.push(o); return o; };
+  if (eq.eyewear) add(makeShades(eq.eyewear), p.head, 0, 0.075, 0.112);
   if (eq.hand) add(new THREE.Mesh(new THREE.TorusGeometry(0.024, 0.009, 6, 12), lam({ color: '#dfe3e8', emissive: '#444' })), p.elbowR, 0.01, -0.31, 0).rotation.x = Math.PI / 2;
-  if (eq.keychain) {
-    const k = new THREE.Group();
-    k.add(new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.007, 6, 10), lam({ color: '#c9ccd0' })));
-    const tag = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.08, 0.012), lam({ color: eq.keychain === 's1_key' ? '#b3262a' : '#1a1a1e' })); tag.position.y = -0.07; k.add(tag);
-    add(k, p.pelvis, 0.19, -0.1, 0.05);
-  }
-  if (eq.drink) add(new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.036, 0.19, 10), lam({ color: '#b8bcc2', emissive: '#222' })), p.elbowL, 0.01, -0.36, 0.03);
+  if (eq.keychain) add(makeKeychain(eq.keychain), p.pelvis, 0.17, -0.05, 0.11);
+  if (eq.drink) add(makeTumbler(), p.elbowL, 0.01, -0.46, 0.03);
   if (eq.fragrance) {
     const g = new THREE.Group();
     for (let i = 0; i < 6; i++) {
@@ -1384,13 +1471,55 @@ function makeBikeMesh(col) {
   const sh = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 1.9), new THREE.MeshBasicMaterial({ color: 0, transparent: true, opacity: 0.3, depthWrite: false })); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.04; b.add(sh);
   return b;
 }
+// boxy two-door city EV (front = +z): 2.95 m long, 1.5 m wide, 1.62 m tall
+function makeEvMesh(col = '#a3141b') {
+  const g = new THREE.Group(), body = lam({ color: col }), dark = lam({ color: '#17181b' }), glass = lam({ color: '#20262d', emissive: '#0a0c10' });
+  const side = canvasTex(128, 32, (c, W, H) => { // lower body side: door seam, handle, black sill
+    c.fillStyle = col; c.fillRect(0, 0, W, H); c.fillStyle = 'rgba(0,0,0,.35)'; c.fillRect(40, 0, 1, H - 6); c.fillRect(86, 0, 1, H - 6);
+    c.fillStyle = 'rgba(255,255,255,.18)'; c.fillRect(0, 3, W, 2); c.fillStyle = '#2a2b2e'; c.fillRect(0, H - 6, W, 6);
+  });
+  const front = canvasTex(64, 32, (c, W, H) => { // grille + headlights + bumper with fogs and plate
+    c.fillStyle = col; c.fillRect(0, 0, W, H);
+    c.fillStyle = '#16171a'; c.fillRect(14, 6, 36, 8); c.fillStyle = '#c9ccd0'; c.fillRect(14, 8, 36, 1); c.fillRect(14, 11, 36, 1); c.fillRect(29, 7, 6, 4);
+    c.fillStyle = '#e8eef2'; c.fillRect(2, 5, 11, 7); c.fillRect(51, 5, 11, 7); c.fillStyle = '#9aa3aa'; c.fillRect(4, 7, 4, 3); c.fillRect(56, 7, 4, 3);
+    c.fillStyle = '#1b1c1f'; c.fillRect(4, 20, 56, 9); c.fillStyle = '#2c2d31'; c.fillRect(22, 21, 20, 6); c.fillStyle = '#dde3e8'; c.fillRect(7, 22, 5, 3); c.fillRect(52, 22, 5, 3);
+  });
+  const rear = canvasTex(64, 32, (c, W, H) => {
+    c.fillStyle = col; c.fillRect(0, 0, W, H); c.fillStyle = '#c8202a'; c.fillRect(2, 2, 6, 14); c.fillRect(56, 2, 6, 14);
+    c.fillStyle = '#ffb0a0'; c.fillRect(3, 4, 2, 4); c.fillRect(59, 4, 2, 4); c.fillStyle = '#1b1c1f'; c.fillRect(4, 22, 56, 8); c.fillStyle = '#2c2d31'; c.fillRect(22, 23, 20, 6);
+  });
+  const cabSide = canvasTex(128, 32, (c, W, H) => { // big door window + small rear quarter window
+    c.fillStyle = col; c.fillRect(0, 0, W, H); c.fillStyle = '#20262d'; c.fillRect(30, 4, 62, 24); c.fillRect(98, 6, 22, 16); c.fillStyle = '#4a5560'; c.fillRect(32, 6, 20, 2);
+  });
+  const sideM = lam({ map: side }), cabM = lam({ map: cabSide }), frontM = lam({ map: front, emissiveMap: front, emissive: '#333' }), rearM = lam({ map: rear });
+  // cabSide's window strip runs back -> front on the +x side; mirror it on -x so both sides read the same way
+  const cabMR = lam({ map: (() => { const t = cabSide.clone(); t.wrapS = THREE.RepeatWrapping; t.repeat.x = -1; t.needsUpdate = true; return t; })() });
+  const sideMR = lam({ map: (() => { const t = side.clone(); t.wrapS = THREE.RepeatWrapping; t.repeat.x = -1; t.needsUpdate = true; return t; })() });
+  const lower = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.68, 2.95), [sideM, sideMR, body, dark, frontM, rearM]); lower.position.y = 0.6; g.add(lower);
+  const cab = new THREE.Mesh(new THREE.BoxGeometry(1.44, 0.64, 2.1), [cabM, cabMR, body, dark, glass, glass]); cab.position.set(0, 1.26, -0.4); g.add(cab);
+  const wind = box(1.36, 0.7, 0.05, glass, 0, 1.22, 0.78, g); wind.rotation.x = -0.42;                            // raked windscreen
+  box(1.46, 0.12, 0.62, body, 0, 0.96, 1.08, g).rotation.x = 0.12;                                               // short hood
+  box(1.48, 0.05, 2.16, body, 0, 1.6, -0.4, g); box(0.5, 0.04, 0.18, body, 0, 1.64, -1.4, g);                   // roof + spoiler
+  for (const s of [-1, 1]) { box(0.08, 0.1, 0.16, body, s * 0.8, 1.08, 0.58, g); box(0.02, 0.07, 0.12, lam({ color: '#e8eef2', emissive: '#555' }), s * 0.845, 1.08, 0.6, g); } // mirrors + indicators
+  const tyre = new THREE.CylinderGeometry(0.31, 0.31, 0.2, 12); tyre.rotateZ(Math.PI / 2);
+  const rim = new THREE.CylinderGeometry(0.2, 0.2, 0.21, 10); rim.rotateZ(Math.PI / 2);
+  const rimM = lam({ color: '#7d8186', emissive: '#222' });
+  for (const x of [-0.68, 0.68]) for (const z of [-0.98, 0.98]) { const t = new THREE.Mesh(tyre, dark); t.position.set(x, 0.31, z); g.add(t); const r = new THREE.Mesh(rim, rimM); r.position.set(x * 1.01, 0.31, z); g.add(r); }
+  const sh = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 3.3), new THREE.MeshBasicMaterial({ color: 0, transparent: true, opacity: 0.32, depthWrite: false })); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.04; g.add(sh);
+  return g;
+}
 const bikes = [];
-function addBike(x, z, heading, col) {
-  const bk = { group: makeBikeMesh(col), pos: new THREE.Vector3(x, groundY(x, z), z), heading, speed: 0, lean: 0 };
+function addBike(x, z, heading, col, ev = false) {
+  const bk = { group: ev ? makeEvMesh(col) : makeBikeMesh(col), pos: new THREE.Vector3(x, groundY(x, z), z), heading, speed: 0, lean: 0, ev };
   scene.add(bk.group); bikes.push(bk); return bk;
 }
+// driving feel: EV is quicker and faster than the motorbikes, turns a bit wider, never leans
+const VEH = { bike: { acc: 15, brake: 26, max: 24, rev: -6, turn: 2.1, r: 0.9 }, ev: { acc: 19, brake: 30, max: 34, rev: -8, turn: 1.8, r: 1.25 } };
 let bike = addBike(33, 6.5, Math.PI / 2, '#e9e6e0'); // the white one next to Texture Coffee
 MAP.bikes.forEach(([x, z, h], i) => addBike(x, z, h, ['#b3262a', '#2a2a2a', '#3c5a8a', '#d8b04a', '#e9e6e0', '#4a7a4a'][i % 6]));
+// parked city EVs: one in front of Texture Coffee, the rest around town (x, z, heading, colour)
+const EV_SPOTS = [[38, 9.5, Math.PI / 2, '#a3141b']];
+for (const [x, z, h, col] of EV_SPOTS) addBike(x, z, h, col, true);
 
 /* ---------------- NPC pedestrians ---------------- */
 const npcs = [];
@@ -1984,18 +2113,19 @@ function toggleBike() {
   if (paused() || P.down > 0) return;
   if (P.onBike) {
     P.onBike = false;
-    P.pos.set(bike.pos.x + Math.cos(bike.heading) * 1.1, bike.pos.y, bike.pos.z - Math.sin(bike.heading) * 1.1);
+    const off = bike.ev ? 1.7 : 1.1;
+    P.pos.set(bike.pos.x + Math.cos(bike.heading) * off, bike.pos.y, bike.pos.z - Math.sin(bike.heading) * off);
     collide(P.pos, 0.4); bike.speed = 0; P.heading = bike.heading;
     $('btnEnter').textContent = 'MOTOR';
     return;
   }
   const nb = nearestBike(3);
   if (nb) { bike = nb; P.onBike = true; $('btnEnter').textContent = 'TURUN'; cam.yaw = bike.heading; }
-  else toast('Tidak ada motor di dekatmu — cari ikon M putih di radar.');
+  else toast('Tidak ada kendaraan di dekatmu — cari ikon M (motor) atau E (mobil) putih di radar.');
 }
 function nearestBike(maxD) {
   let nb = null, nd = maxD;
-  for (const b of bikes) { const d = Math.hypot(b.pos.x - P.pos.x, b.pos.z - P.pos.z); if (d < nd) { nd = d; nb = b; } }
+  for (const b of bikes) { const d = Math.hypot(b.pos.x - P.pos.x, b.pos.z - P.pos.z) - (b.ev ? 1 : 0); if (d < nd) { nd = d; nb = b; } }
   return nb;
 }
 /* ---------------- train: runs the OSM main line through Stasiun Kediri ---------------- */
@@ -2166,7 +2296,7 @@ function drawRadar() {
   if (TRAIN) for (const c of TRAIN.cars) if (c.visible) dot(c.position.x, c.position.z, '#d9622b', 2.5);
   dot(20, 12, '#b3262a', 6, true, 'T');
   { const nb = P.onBike ? null : bikes.reduce((a, b) => (Math.hypot(b.pos.x - px, b.pos.z - pz) < Math.hypot(a.pos.x - px, a.pos.z - pz) ? b : a));
-    for (const b of bikes) if (!(P.onBike && b === bike)) dot(b.pos.x, b.pos.z, '#ffffff', 5, b === nb, 'M'); }
+    for (const b of bikes) if (!(P.onBike && b === bike)) dot(b.pos.x, b.pos.z, '#ffffff', 5, b === nb, b.ev ? 'E' : 'M'); }
   for (const pr of MP.peers.values()) dot(pr.x, pr.z, '#7ad7ff', 3.5);
   if (!active) { dot(SPOT.wardrobe[0], SPOT.wardrobe[1], '#ff8ac4', 4); for (const [id, m] of markers) dot(m.x, m.z, '#ffcf3a', 6, true, mLabel(id)); }
   else if (active.stages[active.si]) for (const t of active.stages[active.si]) if (!t.done) dot(t.x, t.z, '#ff3a2a', 5, true);
@@ -2553,7 +2683,8 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) bgm.p
 const SLOTS = [['outfit', 'Outfit'], ['eyewear', 'Kacamata'], ['fragrance', 'Parfum'], ['hand', 'Cincin'], ['keychain', 'Keychain'], ['drink', 'Tumbler']];
 const WR = { open: false, skip: false, slot: 'outfit', preview: null, view: null };
 // product shots for the catalogue; items without a photo get a drawn icon
-const WR_IMG = { s1_jersey: 'assets/jersey.jpg', s1_perfume: 'assets/parfum.jpg', s1_sun_gray: 'assets/kacamata.jpg', s1_sun_amber: 'assets/kacamata.jpg', s1_ring: 'assets/cincin.jpg' };
+const WR_IMG = { s1_jersey: 'assets/jersey.jpg', s1_perfume: 'assets/parfum.jpg', s1_sun_gray: 'assets/kacamata_gray.jpg', s1_sun_amber: 'assets/kacamata_amber.jpg', s1_ring: 'assets/cincin.jpg',
+  s1_key: 'assets/keychain_s1.jpg', s2_key: 'assets/keychain_s2.jpg', s2_tee_black: 'assets/tee_black.jpg', s2_tee_white: 'assets/tee_white.jpg', s2_tumbler: 'assets/tumbler.jpg' };
 const wrIcon = (() => {
   const cache = {};
   const draw = (id) => {
@@ -2713,7 +2844,7 @@ function mpState(p) {
     pr = { c, x: p.x, z: p.z, y: +p.y || 0, h: +p.h || 0, eqKey: null, nameKey: '', label: null, bike: null };
     MP.peers.set(p.id, pr);
   }
-  Object.assign(pr, { tx: p.x, tz: p.z, ty: +p.y || 0, th: +p.h || 0, spd: +p.s || 0, onBike: !!p.b, seen: performance.now() });
+  Object.assign(pr, { tx: p.x, tz: p.z, ty: +p.y || 0, th: +p.h || 0, spd: +p.s || 0, onBike: !!p.b, ev: +p.b === 2, seen: performance.now() });
   const ek = JSON.stringify(p.eq || {}); if (ek !== pr.eqKey) { pr.eqKey = ek; applyLook(pr.c, sanitizeEq(p.eq)); }
   const name = String(p.n || 'Pemain').slice(0, 24), hp = clamp(Math.round(+p.hp || 0), 0, 100), nk = name + '|' + hp;
   if (nk !== pr.nameKey) { pr.nameKey = nk; setPeerLabel(pr, name, hp); }
@@ -2762,11 +2893,11 @@ function mpUpdate(dt) {
   if (MP.ch) {
     MP.sendT -= dt;
     const h = P.onBike ? bike.heading : P.heading, y = P.onBike ? bike.pos.y : P.pos.y;
-    const x = +P.pos.x.toFixed(2), z = +P.pos.z.toFixed(2), key = `${x},${z},${y.toFixed(2)},${h.toFixed(2)},${P.onBike ? 1 : 0},${Math.ceil(P.hp)}`;
+    const x = +P.pos.x.toFixed(2), z = +P.pos.z.toFixed(2), key = `${x},${z},${y.toFixed(2)},${h.toFixed(2)},${P.onBike ? (bike.ev ? 2 : 1) : 0},${Math.ceil(P.hp)}`;
     if ((key !== MP.last && MP.sendT <= 0) || MP.sendT <= -2.75) {
       MP.sendT = 0.25; MP.last = key;
       MP.ch.send({ type: 'broadcast', event: 's', payload: { id: MP.id, n: MP.name, x, z, y: +y.toFixed(2), h: +h.toFixed(3),
-        s: +(P.onBike ? Math.abs(bike.speed) : P.speed).toFixed(1), b: P.onBike ? 1 : 0, hp: Math.ceil(P.hp), eq: wallet().equip } });
+        s: +(P.onBike ? Math.abs(bike.speed) : P.speed).toFixed(1), b: P.onBike ? (bike.ev ? 2 : 1) : 0, hp: Math.ceil(P.hp), eq: wallet().equip } });
     }
   }
   const now = performance.now(), k = Math.min(1, 8 * dt);
@@ -2776,7 +2907,9 @@ function mpUpdate(dt) {
     pr.x = lerp(pr.x, pr.tx, k); pr.z = lerp(pr.z, pr.tz, k); pr.y = lerp(pr.y, pr.ty, k); pr.h = angLerp(pr.h, pr.th, k);
     const far = Math.hypot(pr.x - P.pos.x, pr.z - P.pos.z) > 140, g = pr.c.group; g.visible = !far;
     if (pr.onBike) {
-      if (!pr.bike) { pr.bike = makeBikeMesh('#2a2a2a'); scene.add(pr.bike); }
+      if (pr.bike && pr.bikeEv !== pr.ev) { scene.remove(pr.bike); pr.bike = null; }
+      if (!pr.bike) { pr.bike = pr.ev ? makeEvMesh() : makeBikeMesh('#2a2a2a'); pr.bikeEv = pr.ev; scene.add(pr.bike); }
+      g.visible = !far && !pr.ev;
       pr.bike.visible = !far; pr.bike.position.set(pr.x, pr.y, pr.z); pr.bike.rotation.set(0, pr.h, 0);
       g.position.set(pr.x - Math.sin(pr.h) * 0.25, pr.y + 0.02, pr.z - Math.cos(pr.h) * 0.25); g.rotation.set(0, pr.h, 0);
       if (!far) animChar(pr.c, 0, dt, 'ride');
@@ -2803,17 +2936,17 @@ function update(dt) {
   const mag = Math.min(1, Math.hypot(ix, iy));
 
   if (P.onBike) {
-    const thr = iy;
-    if (thr > 0) bike.speed += thr * 15 * dt; else if (thr < 0) bike.speed += thr * (bike.speed > 0 ? 26 : 8) * dt;
-    bike.speed -= bike.speed * 0.7 * dt; if (!thr) bike.speed -= Math.sign(bike.speed) * Math.min(Math.abs(bike.speed), 4 * dt);
-    bike.speed = clamp(bike.speed, -6, 24);
-    const turn = ix * 2.1 * clamp(Math.abs(bike.speed) / 5, 0, 1) * Math.sign(bike.speed || 1);
+    const thr = iy, V = bike.ev ? VEH.ev : VEH.bike;
+    if (thr > 0) bike.speed += thr * V.acc * dt; else if (thr < 0) bike.speed += thr * (bike.speed > 0 ? V.brake : 8) * dt;
+    bike.speed -= bike.speed * (bike.ev ? 0.5 : 0.7) * dt; if (!thr) bike.speed -= Math.sign(bike.speed) * Math.min(Math.abs(bike.speed), 4 * dt);
+    bike.speed = clamp(bike.speed, V.rev, V.max);
+    const turn = ix * V.turn * clamp(Math.abs(bike.speed) / 5, 0, 1) * Math.sign(bike.speed || 1);
     bike.heading -= turn * dt;
-    bike.lean = lerp(bike.lean, -ix * clamp(bike.speed / 20, 0, 1) * 0.35, 6 * dt);
+    bike.lean = bike.ev ? 0 : lerp(bike.lean, -ix * clamp(bike.speed / 20, 0, 1) * 0.35, 6 * dt);
     bike.pos.x += Math.sin(bike.heading) * bike.speed * dt; bike.pos.z += Math.cos(bike.heading) * bike.speed * dt;
     if (P.kx || P.kz) { bike.pos.x += P.kx * dt; bike.pos.z += P.kz * dt; const k = Math.exp(-5 * dt); P.kx *= k; P.kz *= k; }
-    if (collide(bike.pos, 0.9) && Math.abs(bike.speed) > 6) {
-      if (Math.abs(bike.speed) > 15 && P.knock <= 0) hitPlayer(10, 0, 0, 'Nabrak tembok!');
+    if (collide(bike.pos, V.r) && Math.abs(bike.speed) > 6) {
+      if (Math.abs(bike.speed) > (bike.ev ? 22 : 15) && P.knock <= 0) hitPlayer(10, 0, 0, 'Nabrak tembok!');
       bike.speed *= -0.3;
     }
     bike.pos.y = lerp(bike.pos.y, groundY(bike.pos.x, bike.pos.z), 12 * dt);
@@ -2837,7 +2970,7 @@ function update(dt) {
     collide(P.pos, 0.4);
     // hint when standing next to a bike
     const nb = nearestBike(2.6);
-    if (nb && !P.bikeHint && P.down <= 0) { P.bikeHint = true; toast(isTouch ? 'Tekan tombol MOTOR untuk naik' : 'Tekan F untuk naik motor', 1800); }
+    if (nb && !P.bikeHint && P.down <= 0) { P.bikeHint = true; const w = nb.ev ? 'mobil' : 'motor'; toast(isTouch ? `Tekan tombol MOTOR untuk naik ${w}` : `Tekan F untuk naik ${w}`, 1800); }
     if (!nearestBike(4)) P.bikeHint = false;
     const gy = groundY(P.pos.x, P.pos.z);
     P.vy -= 18 * dt; P.pos.y += P.vy * dt;
@@ -2845,7 +2978,7 @@ function update(dt) {
   }
 
   // traffic: cars + motorbike riders follow the real street graph
-  const tgt = P.onBike ? bike.pos : P.pos, tr = P.onBike ? 0.9 : 0.4;
+  const tgt = P.onBike ? bike.pos : P.pos, tr = P.onBike ? (bike.ev ? 1.2 : 0.9) : 0.4;
   const hitTest = (cx, cz, h, hl, hw, spd, name) => { // vehicle-local box test (h = heading, hl/hw = half length/width)
     if (P.fainted || P.down > 0) return;
     const s = Math.sin(h), c = Math.cos(h), dx = tgt.x - cx, dz = tgt.z - cz;
@@ -2931,6 +3064,7 @@ function place(dt) {
   updatePosterNear();
   playerMarker.position.y = 2.55 + Math.sin(performance.now() * 0.004) * 0.08;
   playerMarker.rotation.y += dt * 2;
+  player.group.visible = !(P.onBike && bike.ev);
   if (P.onBike) {
     player.group.position.y = bike.pos.y + 0.02;
     player.group.position.x -= Math.sin(bike.heading) * 0.25; player.group.position.z -= Math.cos(bike.heading) * 0.25;
@@ -2948,7 +3082,7 @@ function place(dt) {
   for (const b of bikes) { b.group.position.copy(b.pos); b.group.rotation.set(0, b.heading, 0); b.group.rotateZ(b.lean); }
 
   // camera
-  const dist = P.onBike ? 8 : cam.dist;
+  const dist = P.onBike ? (bike.ev ? 9.5 : 8) : cam.dist;
   const target = tmpV.set(P.pos.x, P.pos.y + 1.55, P.pos.z);
   const cp = Math.cos(cam.pitch);
   const want = new THREE.Vector3(target.x - Math.sin(cam.yaw) * dist * cp, target.y + Math.sin(cam.pitch) * dist, target.z - Math.cos(cam.yaw) * dist * cp);
