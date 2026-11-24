@@ -1651,24 +1651,30 @@ function ensureBillboard() {
     const st = new THREE.Mesh(new THREE.BoxGeometry(0.26, len, 0.26), steel); st.position.set((x0 + x1) / 2, (y0 + y1) / 2, 0); st.rotation.z = -Math.atan2(x1 - x0, y1 - y0); g.add(st);
   }
   { const arm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 4.4), steel); arm.position.set(-s * 0.2, 13.2, 2.4 + COL / 2); g.add(arm); box(0.5, 0.22, 0.9, lam({ color: '#e8e6dc', emissive: '#6a6450' }), -s * 0.2, 13.05, 4.5 + COL / 2, g); } // street lamp arm
-  const LOGO = { x: 22, y: 22, s: 174 }; // Texture logo panel on the left of the screen
   const scan = (c, x, y, w, h) => { c.fillStyle = 'rgba(0,0,0,.18)'; for (let yy = y; yy < y + h; yy += 3) c.fillRect(x, yy, w, 1); }; // LED scanlines
   const faceTex = canvasTex(480, 264, (c, W, H) => {
     const body = H - 46;
     const gr = c.createLinearGradient(0, 0, W, body); gr.addColorStop(0, '#3a2414'); gr.addColorStop(0.55, '#7a4a22'); gr.addColorStop(1, '#2a1a10'); c.fillStyle = gr; c.fillRect(0, 0, W, body);
     c.fillStyle = 'rgba(255,214,140,.10)'; for (let i = 0; i < 7; i++) c.fillRect(30 + i * 64, 0, 26, body); // café interior light bands
-    c.fillStyle = '#f2e8d2'; c.fillRect(LOGO.x, LOGO.y, LOGO.s, LOGO.s); // cream panel; the logo is drawn on it once loaded
-    c.textAlign = 'center'; c.fillStyle = '#f2e8d2'; c.font = 'bold 26px monospace'; c.fillText('WELCOME TO', 334, 88);
-    c.fillStyle = '#ffcf3a'; c.font = 'bold 50px monospace'; c.fillText('TEX CITY', 334, 142);
-    c.fillStyle = '#c41e24'; c.fillRect(224, 160, 220, 4);
     c.fillStyle = '#0c0c0c'; c.fillRect(0, body, W, H - body);
-    c.fillStyle = '#ffcf3a'; c.font = 'bold 19px monospace'; c.fillText('Jelajahi kota, Temukan ceritamu sendiri', W / 2, body + 29);
-    scan(c, 0, 0, W, H);
   }, false);
-  { const img = new Image(); img.onload = () => { const c = faceTex.image.getContext('2d'); c.drawImage(img, LOGO.x + 4, LOGO.y + 4, LOGO.s - 8, LOGO.s - 8); scan(c, LOGO.x, LOGO.y, LOGO.s, LOGO.s); faceTex.needsUpdate = true; }; img.src = 'assets/texture_logo.png'; }
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), new THREE.MeshBasicMaterial({ map: faceTex }));
+  const drawText = (c, W, H) => { // headline in front of the red Texture shape
+    const body = H - 46;
+    c.textAlign = 'center'; c.fillStyle = 'rgba(0,0,0,.35)'; c.font = 'bold 30px monospace'; c.fillText('WELCOME TO', W / 2 + 2, 92);
+    c.font = 'bold 62px monospace'; c.fillText('TEX CITY', W / 2 + 3, 160);
+    c.fillStyle = '#f2e8d2'; c.font = 'bold 30px monospace'; c.fillText('WELCOME TO', W / 2, 90);
+    c.fillStyle = '#ffcf3a'; c.font = 'bold 62px monospace'; c.fillText('TEX CITY', W / 2, 157);
+    c.fillStyle = '#ffcf3a'; c.font = 'bold 19px monospace'; c.fillText('Jelajahi kota, Temukan ceritamu sendiri', W / 2, body + 29);
+    scan(c, 0, 0, W, H); faceTex.needsUpdate = true;
+  };
+  { const img = new Image(); const c = faceTex.image.getContext('2d'), W = faceTex.image.width, H = faceTex.image.height;
+    img.onload = () => { const bw = 330, bh = bw * img.height / img.width; c.drawImage(img, (W - bw) / 2, (H - 46 - bh) / 2 + 4, bw, bh); drawText(c, W, H); };
+    img.onerror = () => drawText(c, W, H);
+    img.src = 'assets/tex_blob.png'; }
+  const faceMat = new THREE.MeshBasicMaterial({ map: faceTex });
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), faceMat);
   face.position.set(sx, SY + SH / 2, 0.36); g.add(face);
-  const back = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), dark); back.position.set(sx, SY + SH / 2, -0.36); back.rotation.y = Math.PI; g.add(back);
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), faceMat); back.position.set(sx, SY + SH / 2, -0.36); back.rotation.y = Math.PI; g.add(back); // same screen on both sides
   const px = x + ux * 1.4, pz = z + uz * 1.4;
   g.position.set(px, groundY(px, pz), pz); g.rotation.y = rot; scene.add(g);
   addSolid(px - COL / 2 - 0.1, px + COL / 2 + 0.1, pz - COL / 2 - 0.1, pz + COL / 2 + 0.1);
