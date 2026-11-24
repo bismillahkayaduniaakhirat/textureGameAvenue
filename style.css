@@ -266,3 +266,13 @@ button.sm:disabled{opacity:.45}
 .ms.mine{color:var(--red)}
 .bar{height:8px;background:#fff;border:2px solid #000;margin-top:4px}
 .bar i{display:block;height:100%;background:var(--red)}
+/* touch, portrait: stick bottom-left, 2x2 action pad bottom-right, nothing overlapping */
+body.touch #radarWrap{top:76px}
+body.touch #areaName{top:192px}
+@media (orientation:portrait){
+  body.touch #stick{left:max(18px,env(safe-area-inset-left));bottom:max(30px,env(safe-area-inset-bottom))}
+  body.touch #actBtns{gap:8px;right:max(12px,env(safe-area-inset-right));bottom:max(22px,env(safe-area-inset-bottom))}
+  body.touch .act{width:64px;height:64px}
+  body.touch #btnPoster{bottom:190px}
+  body.touch #emotes{top:auto;bottom:178px;transform:none}
+}

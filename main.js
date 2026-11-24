@@ -439,6 +439,8 @@ const NAMED = [
   { id: 'setiabudi', name: 'SETIABUDI 6AM', ll: [-7.8187911, 112.0107452], kind: 'cafe', street: 'Jalan Dokter Setiabudi', wall: '#f0ece2', roof: '#6a625c', accent: '#1f3a5a', fg: '#fff', h: 6 },
   { id: 'astonish', name: 'ASTONISH', ll: [-7.8199108, 112.0106423], kind: 'cafe', wall: '#222', roof: '#3a3634', accent: '#e9c46a', fg: '#1a1a1a', h: 6 },
   { id: 'sopo', name: 'WARKOP SOPO 1970', ll: [-7.8178701, 112.0100124], kind: 'warkop', wall: '#8a5a32', roof: '#7a3e28', accent: '#f6d36b', fg: '#3a1e0e', h: 5 },
+  { id: 'rukunwarga', name: 'TOKO KOPI RUKUN WARGA', pick: [175.4, -336.3], street: 'Jalan Stasiun', kind: 'cafe', wall: '#4a4440', roof: '#3a3634', accent: '#f4f1ea', fg: '#1a1a1a', h: 5, hx: 5 },
+  { id: 'st18', name: 'ST 18', pick: [233, -357.7], street: 'Jalan Stasiun', kind: 'cafe', wall: '#ece4cf', roof: '#8a8276', accent: '#1f5a46', fg: '#f4ecd4', h: 8, hx: 8 },
   { id: 'giekie', name: 'GIE KIE KONG SOE', ll: [-7.8177181, 112.0110774], kind: 'temple', wall: '#b8302a', roof: '#2f6a4a', accent: '#b3262a', fg: '#ffd24a', h: 6 },
 ];
 {
@@ -769,6 +771,75 @@ const FACADE = {
     for (const x of [dx - 1.0, dx + dw + 1.0]) { R(x - 0.04, 3.7, 0.08, 0.35, '#e0b040'); g.fillStyle = '#ff3a2a'; g.beginPath(); g.ellipse(x * sx, Y(3.3), 0.38 * sx, 0.45 * sx, 0, 0, 7); g.fill(); R(x - 0.15, 2.8, 0.3, 0.08, '#e0b040'); }
     if (h > 5) { R(L / 2 - 1.7, 3.95, 3.4, 0.7, '#1a1a1a'); fit('GIE KIE KONG SOE', L / 2, 4.3, 0.42, 3.1, '#ffd24a'); }
   },
+  // Jl. Stasiun coffee shop: dark grey-brown front, white-framed glass doors, green steel canopy with bulbs,
+  // white name sign with a black mark, plants on the roof edge and by the door
+  rukunwarga(p) {
+    const { L, h, R, speck, T, fit, g, sx, Y } = p;
+    R(0, 0, L, h, '#4a4440'); speck(0, 0, L, h, ['#3e3935', '#57504a'], 120);
+    R(0, h - 0.25, L, 0.25, '#2e2a27'); // parapet cap
+    // white sign band with the black round mark
+    const sw = Math.min(L - 0.6, 7.5), sx0 = (L - sw) / 2;
+    R(sx0, 3.55, sw, 0.75, '#f4f1ea'); R(sx0, 3.52, sw, 0.04, '#1a1a1a');
+    g.fillStyle = '#1a1a1a'; g.beginPath(); g.arc((sx0 + 0.45) * sx, Y(3.92), 0.27 * sx, 0, 7); g.fill();
+    g.fillStyle = '#f4f1ea'; g.beginPath(); g.arc((sx0 + 0.45) * sx, Y(3.92), 0.12 * sx, 0, 7); g.fill();
+    fit('TOKO KOPI RUKUN WARGA', sx0 + 0.85 + (sw - 1.0) / 2, 3.92, 0.42, sw - 1.1, '#1a1a1a');
+    // shopfront glass with white frames, warm inside
+    R(0.3, 0, L - 0.6, 3.1, '#2a2522');
+    for (const x of bays(L - 0.6, 1.5)) {
+      const x0 = 0.3 + x;
+      const gr = g.createLinearGradient(0, Y(2.9), 0, Y(0.2)); gr.addColorStop(0, '#5a4636'); gr.addColorStop(1, '#c98a4e');
+      g.fillStyle = gr; g.fillRect(Math.round((x0 + 0.08) * sx), Math.round(Y(2.9)), Math.round(1.34 * sx), Math.round(2.7 * p.sy));
+      R(x0, 0, 0.08, 3.0, '#f2f2ee'); R(x0, 2.95, 1.5, 0.08, '#f2f2ee'); R(x0, 1.05, 1.5, 0.06, '#f2f2ee');
+    }
+    R(L - 0.38, 0, 0.08, 3.0, '#f2f2ee');
+    // green canopy edge + string lights
+    R(0, 3.1, L, 0.22, '#2f5a3a'); R(0, 3.05, L, 0.05, '#1e3a26');
+    for (let x = 0.3; x < L; x += 0.55) R(x, 2.92 + Math.sin(x * 2.2) * 0.04, 0.1, 0.1, '#ffd98a');
+    // brown hanging sign by the door
+    R(L * 0.72, 2.25, 0.04, 0.4, '#1a1a1a'); R(L * 0.72 - 0.4, 1.75, 0.85, 0.5, '#7a4a2a'); T('KOPI', L * 0.72, 2.0, 0.24, '#f4e4c8');
+    // potted plants
+    for (const x of [0.15, L - 0.75]) { R(x, 0, 0.6, 0.45, '#3a3a38'); R(x - 0.1, 0.45, 0.8, 0.7, '#3f7a3a'); R(x + 0.1, 1.0, 0.4, 0.4, '#2c5a2c'); }
+    // rooftop greenery
+    if (h > 4.6) for (let x = 0.2; x < L - 0.4; x += 0.7) R(x, h - 0.25, 0.55, 0.35 + ((x * 7) % 3) * 0.08, x % 1.4 < 0.7 ? '#3f7a3a' : '#2c5a2c');
+    R(0, 0, L, 0.12, '#7a756e');
+  },
+  // two-storey colonial corner: cream plaster, arched upper windows, pilasters and balcony rail,
+  // teal shopfront with a green ST18 awning and a round green sign
+  st18(p) {
+    const { L, h, R, speck, T, fit, g, sx, sy, Y } = p;
+    R(0, 0, L, h, '#ece4cf'); speck(0, 0, L, h, ['#e0d7c0', '#f4eedc'], 160);
+    R(0, h - 0.45, L, 0.45, '#d8cfb6'); R(0, h - 0.5, L, 0.06, '#b5ab92'); // cornice
+    R(0, 3.75, L, 0.3, '#ddd4bc'); R(0, 3.72, L, 0.05, '#b5ab92'); // floor band
+    // pilasters
+    for (const x of [0, ...bays(L, 3).slice(1), L - 0.35]) R(x, 0.0, 0.35, h - 0.5, '#f4eedc');
+    // upper floor: arched windows + balcony rail
+    for (const x of bays(L, 3)) {
+      const cx = x + 1.5, ww = 1.1, top = Math.min(h - 1.0, 6.6), bot = 4.5;
+      R(cx - ww / 2 - 0.12, bot - 0.1, ww + 0.24, top - bot + 0.1, '#cfc5aa');
+      R(cx - ww / 2, bot, ww, top - bot, '#3d5a5a'); R(cx - 0.03, bot, 0.06, top - bot, '#e9e2cc');
+      g.fillStyle = '#cfc5aa'; g.beginPath(); g.arc(cx * sx, Y(top), (ww / 2 + 0.12) * sx, Math.PI, 0); g.fill();
+      g.fillStyle = '#5c7a78'; g.beginPath(); g.arc(cx * sx, Y(top), (ww / 2) * sx, Math.PI, 0); g.fill();
+    }
+    R(0, 4.05, L, 0.1, '#2a4a3e'); for (let x = 0.1; x < L; x += 0.25) R(x, 4.15, 0.05, 0.75, '#2a4a3e'); R(0, 4.9, L, 0.08, '#2a4a3e'); // balcony rail
+    // green awning with ST18
+    R(0.2, 3.05, L - 0.4, 0.6, '#1f5a46'); for (let x = 0.2; x < L - 0.4; x += 0.6) R(x, 3.05, 0.3, 0.6, '#246650');
+    R(0.2, 2.95, L - 0.4, 0.12, '#163f32');
+    fit('ST18', L / 2, 3.35, 0.4, Math.min(3, L - 1), '#f4ecd4');
+    // teal shopfront, warm glass
+    R(0.35, 0, L - 0.7, 2.95, '#2e6b62');
+    for (const x of bays(L - 0.7, 1.6)) {
+      const x0 = 0.35 + x + 0.12, w = 1.36;
+      const gr = g.createLinearGradient(0, Y(2.7), 0, Y(0.3)); gr.addColorStop(0, '#4a5a50'); gr.addColorStop(1, '#d69a58');
+      g.fillStyle = gr; g.fillRect(Math.round(x0 * sx), Math.round(Y(2.7)), Math.round(w * sx), Math.round(2.4 * sy));
+    }
+    R(L * 0.5 - 1.1, 1.95, 2.2, 0.3, '#f4ecd4'); fit('ORDER ONLINE & TAKE AWAY', L * 0.5, 2.1, 0.16, 2.1, '#1f5a46');
+    // round green sign on the pilaster
+    const rx = Math.min(L - 0.6, L * 0.85);
+    g.fillStyle = '#1f5a46'; g.beginPath(); g.arc(rx * sx, Y(5.6), 0.55 * sx, 0, 7); g.fill();
+    g.strokeStyle = '#f4ecd4'; g.lineWidth = 2; g.beginPath(); g.arc(rx * sx, Y(5.6), 0.46 * sx, 0, 7); g.stroke();
+    T('ST 18', rx, 5.6, 0.26, '#f4ecd4');
+    R(0, 0, L, 0.15, '#9a927e');
+  },
   // colonial station hall: white walls, red dado, arched doors with fanlights, corrugated roof, KEDIRI on the gable
   stasiun(p) {
     const { L, h, R, speck, T, fit, g, sx, sy, Y } = p;
@@ -878,6 +949,31 @@ function buildFrontProps(nb, f) {
     bx(1.0, 0.06, 0.5, lam({ color: '#2f7a3e' }), -L * 0.05, 0.75, 1.5); bx(0.06, 0.75, 0.06, lam({ color: '#2f7a3e' }), -L * 0.05, 0.37, 1.5); // green table
     bx(2.4, 0.4, 0.5, lam({ color: '#8a7a64' }), -L * 0.32, 0.2, 0.5); // bench along the wall
   }
+  if (nb.id === 'rukunwarga') {
+    // green steel canopy on two posts, bulbs under it, a bench and plants on the terrace
+    const green = lam({ color: '#2f5a3a' }), dark = lam({ color: '#1e2a22' });
+    bx(L + 0.4, 0.12, 2.4, green, 0, 3.2, 1.2);
+    for (const s of [-1, 1]) { bx(0.12, 3.2, 0.12, dark, s * (L / 2 - 0.3), 1.6, 2.3); solid(s * (L / 2 - 0.3), 2.3, 0.3, 0.3); }
+    const bulb = new THREE.MeshBasicMaterial({ color: '#ffd98a' });
+    for (let x = -L / 2 + 0.5; x < L / 2; x += 0.9) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 4), bulb); m.position.set(x, 3.0, 2.25); g.add(m); }
+    const wood = lam({ color: '#7a4a2a' });
+    bx(1.8, 0.1, 0.45, wood, -L * 0.22, 0.45, 0.6); bx(1.8, 0.45, 0.08, dark, -L * 0.22, 0.22, 0.6);
+    for (const [x, z] of [[L * 0.25, 1.5], [L * 0.1, 1.7]]) { bx(0.5, 0.05, 0.5, wood, x, 0.72, z); bx(0.06, 0.72, 0.06, dark, x, 0.36, z); }
+    for (const x of [-L / 2 + 0.5, L / 2 - 0.5]) { bx(0.55, 0.5, 0.55, lam({ color: '#3a3a38' }), x, 0.25, 0.5); const pl = new THREE.Mesh(new THREE.IcosahedronGeometry(0.45, 0), lam({ color: '#3f7a3a' })); pl.position.set(x, 0.85, 0.5); g.add(pl); }
+  }
+  if (nb.id === 'st18') {
+    // green awning sticking out over the pavement, a round blade sign and two tables
+    const green = lam({ color: '#1f5a46' });
+    const aw = new THREE.Mesh(new THREE.BoxGeometry(L - 0.4, 0.08, 1.4), green); aw.position.set(0, 3.25, 0.65); aw.rotation.x = 0.22; g.add(aw);
+    const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.08, 20), new THREE.MeshBasicMaterial({ map: canvasTex(64, 64, (c, W, Hh) => {
+      c.fillStyle = '#1f5a46'; c.fillRect(0, 0, W, Hh); c.strokeStyle = '#f4ecd4'; c.lineWidth = 3; c.beginPath(); c.arc(32, 32, 27, 0, 7); c.stroke();
+      c.fillStyle = '#f4ecd4'; c.font = 'bold 18px monospace'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('ST18', 32, 33);
+    }, false) }));
+    disc.rotation.z = Math.PI / 2; disc.position.set(L / 2 - 0.4, 4.4, 0.7); g.add(disc);
+    bx(0.06, 0.06, 0.7, lam({ color: '#2a2a2a' }), L / 2 - 0.4, 4.95, 0.35);
+    const wood = lam({ color: '#c9a878' }), legs = lam({ color: '#2a2a2a' });
+    for (const x of [-L * 0.25, L * 0.12]) { bx(0.6, 0.05, 0.6, wood, x, 0.74, 1.6); bx(0.06, 0.74, 0.06, legs, x, 0.37, 1.6); }
+  }
   if (nb.id === 'aries') {
     // projecting canopy over the showroom with two white name boards, like the dealer in the photo
     const white = lam({ color: '#e8eae8' }), grey = lam({ color: '#6e7476' });
@@ -986,7 +1082,7 @@ for (const nb of NAMED) {
   f.position.set(best.mx + best.nx * 0.06, h / 2, best.mz + best.nz * 0.06); f.rotation.y = Math.atan2(best.nx, best.nz); scene.add(f);
   nb.front = best;
   const extra = nb.id === 'surya' ? buildSurya(nb, best) : null;
-  if (nb.id === 'tropis' || nb.id === 'stasiun' || nb.id === 'aries') buildFrontProps(nb, best);
+  if (['tropis', 'stasiun', 'aries', 'rukunwarga', 'st18'].includes(nb.id)) buildFrontProps(nb, best);
   if (nb.kind !== 'station') { if (extra || nb.kind === 'hotel') label3D(nb.name, b.cx, extra ? extra.tower + 3 : h + 4, b.cz, nb.accent, nb.fg, 0.8); else roofBoard(nb, best, h); }
   if (nb.kind === 'hotel' && !extra) { // rooftop billboard
     const grey = lam({ color: '#333' }), face = textSign(nb.name, nb.accent, nb.fg, 256, 56, 34);
@@ -1598,7 +1694,7 @@ const llSpot = (ll) => kerbFront(...latLonToGame(ll[0], ll[1]));
 const SETONO = [-7.8163776, 112.0116698], ORION = [-7.8159821, 112.0142145];
 // named pins on the full map (client list). src: a NAMED building id, or [lat, lon]; null = location still unknown
 const MAP_PINS = [
-  ['ARIES MOTOR', 'aries'], ['STASIUN KEDIRI', 'stasiun'], ['TOKO KOPI RUKUN WARGA', null], ['ST 18', null],
+  ['ARIES MOTOR', 'aries'], ['STASIUN KEDIRI', 'stasiun'], ['TOKO KOPI RUKUN WARGA', 'rukunwarga'], ['ST 18', 'st18'],
   ['HOTEL GRAND SURYA', 'surya'], ['SKDP', 'skdp'], ['TROPIS COFFEE', 'tropis'], ['SETIABUDI 6AM', 'setiabudi'],
   ['ASTONISH', 'astonish'], ['WARKOP SOPO', 'sopo'], ['GIE KIE KONG SOE', 'giekie'], ['SETONO GEDONG', SETONO],
 ];
@@ -2243,7 +2339,7 @@ function faint() {
 function respawn() {
   if (!P.fainted) return;
   $('wasted').classList.add('hidden');
-  const [gx, gz, gh] = homePos();
+  const [gx, gz, gh] = texPos();
   P.pos.set(gx, 0, gz); P.kx = P.kz = 0; P.vy = 0; P.hp = 100; P.down = 0; P.fall = 0; P.fainted = false; P.heading = gh; P.speed = 0;
   releaseInput(); runToggle = false; $('btnRun').classList.remove('on'); // respawn standing still
   cam.yaw = gh; P.lastHit = clock.elapsedTime; updateHUD(); toast('HP penuh lagi. Hati-hati di jalan!');
@@ -2254,6 +2350,12 @@ let HOME = null;
 function homePos() {
   if (!HOME) { const [x, z] = kerbFront(125.4, -609.1); HOME = [x, z, Math.atan2(-20, 170)]; }
   return HOME;
+}
+// Respawn point: the kerb in front of Texture Coffee, facing the street
+let TEXP = null;
+function texPos() {
+  if (!TEXP) { const [x, z] = kerbFront(TEXTURE_HEAL[0] - 9, TEXTURE_HEAL[1]); TEXP = [x, z, Math.PI / 2]; } // west of the Wardrobe + shop pins (so no card pops up), facing east to the shop
+  return TEXP;
 }
 // TEX CITY entrance: the CFD gate at the south end of Jl. Dhoho (kerb next to the road, facing north up the street)
 let GATE = null;
@@ -3072,7 +3174,7 @@ function update(dt) {
     // camera trails behind bike
     if (clock.elapsedTime - cam.lastDrag > 1.2 && Math.abs(bike.speed) > 1) cam.yaw = angLerp(cam.yaw, bike.heading, 2.8 * dt);
   } else {
-    const run = keys.ShiftLeft || keys.ShiftRight || runToggle || (isTouch && mag > 0.92);
+    const run = keys.ShiftLeft || keys.ShiftRight || runToggle;
     const spd = P.down > 0 ? 0 : mag > 0.08 ? (run ? 8.5 : 4.2) * Math.max(mag, 0.5) : 0;
     if (spd > 0) {
       const f = [Math.sin(cam.yaw), Math.cos(cam.yaw)], r = [-Math.cos(cam.yaw), Math.sin(cam.yaw)];
