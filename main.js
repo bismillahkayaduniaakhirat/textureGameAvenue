@@ -12,8 +12,8 @@ const CONFIG = {
   FNB_RATE: 10, MERCH_RATE: 10, COIN_UNIT_RP: 15000, // Tex Coins per Rp15.000 (server: fnb_rate / merch_rate / coin_unit_rp)
   // mission rewards in Tex Coins (server: mission_rewards; the server pays, this is only for display)
   REWARD: { T1: 1, T2: 2, T3: 2, T4: 3, T5: 3, T6: 4, T7: 5, B1: 1, B2: 1, B3: 2 }, // max 5 per mission
-  // T4 orders. Placeholder names: replace with the real Texture Coffee menu.
-  MENU: ['Es Kopi Susu Texture', 'Americano', 'Cappuccino', 'Matcha Latte', 'Butter Croffle'],
+  // T4 orders: Texture Coffee menu
+  MENU: ['Caffe Latte', 'Cocoa Berry', 'Papa Katsu', 'Indomie ala Cak Su', 'Chips & Crave'],
   MILESTONES: [
     { n: 1, coins: 450, prize: 'Jersey OOT-SS25 "Pas Presse de Vivre"' },
     { n: 2, coins: 550, prize: 'Kaos OOT-SS26 (hitam atau putih)' },
@@ -1799,9 +1799,9 @@ function reachable(pt) { // nearest walkable spot to pt (pt itself when it alrea
   return pt;
 }
 const tgt = (pt, o = {}) => { const [x, z] = reachable(pt); return { x, z, ...o }; };
-function posterTargets() { // 3 notice boards along Jl. Dhoho
-  return boards.filter((b) => b.dhoho).map((b, i) =>
-    tgt([b.x + b.nx * 1.4, b.z + b.nz * 1.4], { board: b, design: i % POSTERS.length, toast: 'Poster ditempel!' }));
+function posterTargets() { // 3 notice boards: Aries Motor, Hotel Grand Surya, Texture Coffee
+  return boards.filter((b) => b.t2).map((b, i) =>
+    tgt([b.x + b.nx * 1.4, b.z + b.nz * 1.4], { board: b, design: T2_POSTER + i, toast: 'Poster ditempel!' }));
 }
 function orderTargets() { // 5 customers on streets around Texture Coffee
   const pool = edgesNear(5, 50, 260, CAFE.x, CAFE.z), out = [];
@@ -1823,7 +1823,7 @@ const MDEF = {
       [tgt(dhoho(0.3), { label: 'checkpoint 2', say: ['Mantap! Tahan Shift (atau tombol LARI) buat lari.', 'Lihat motor di pinggir jalan? Dekati lalu tekan F atau tombol MOTOR buat naik.'] })],
       [tgt(ensureBillboard().spot, { label: 'billboard', say: ['Ini dia billboard kota kita: WELCOME TO TEX CITY!', 'Setiap misi yang selesai memberi Tex Coins. Misi berikutnya mulai dari sini. Cari penanda kuning, ya.'] })],
     ] },
-  T2: { name: 'Poster Drop', unit: 'Poster', desc: 'Tempel 3 poster di papan pengumuman sepanjang Jalan Dhoho.', at: () => ensureBillboard().spot,
+  T2: { name: 'Poster Drop', unit: 'Poster', desc: 'Tempel 3 poster Texture di papan pengumuman: depan Aries Motor, Hotel Grand Surya dan Texture Coffee.', at: () => ensureBillboard().spot,
     stages: () => [posterTargets()] },
   T3: { name: 'Coffee Run', unit: 'Paket', desc: 'Ambil 3 paket dari SKDP, Tropis Coffee, dan Aries Motor, lalu bawa ke Texture Coffee.', at: () => SPOT.texture,
     stages: () => [
@@ -1975,6 +1975,10 @@ const POSTERS = [
   { title: 'Garage Sale 11.11 — Up to 50% Off', file: 'assets/poster_garage.jpg', dl: 'OOT-Garage-Sale-11.11.jpg', aspect: 1414 / 2000 },
   { title: 'Garage Sale 11.11 — Story', file: 'assets/poster_story.jpg', dl: 'OOT-Garage-Sale-11.11-Story.jpg', aspect: 1080 / 1920 },
   { title: 'OutOfTex — Koran Garage Sale', file: 'assets/poster_koran.jpg', dl: 'OutOfTex-Garage-Sale-Koran.jpg', aspect: 1414 / 2000 },
+  // mission T2 posters (from T2_POSTER on)
+  { title: 'Texture Coffee — With Love', file: 'assets/poster_tex_withlove.jpg', dl: 'Texture-Coffee-With-Love.jpg', aspect: 1333 / 2000 },
+  { title: 'Texture Coffee — Koran', file: 'assets/poster_tex_koran.jpg', dl: 'Texture-Coffee-Koran.jpg', aspect: 1333 / 2000 },
+  { title: 'Texture Coffee — Menu', file: 'assets/poster_tex_menu.jpg', dl: 'Texture-Coffee-Menu.jpg', aspect: 1333 / 2000 },
 ];
 for (const po of POSTERS) { po.tex = texLoader.load(po.file); po.tex.colorSpace = THREE.SRGBColorSpace; po.mat = new THREE.MeshBasicMaterial({ map: po.tex }); }
 const blankPosterMat = lam({ map: canvasTex(32, 48, (g, w, h) => { g.fillStyle = '#d9cfb8'; g.fillRect(0, 0, w, h); noise(g, w, h, 25, 2); g.fillStyle = '#8a7a5a'; g.font = 'bold 6px monospace'; g.textAlign = 'center'; g.fillText('TEMPEL', w / 2, h / 2 - 2); g.fillText('DI SINI', w / 2, h / 2 + 6); }) });
@@ -2000,11 +2004,17 @@ function makeBoard(x, z, yaw, i) {
 }
 const boards = POSTER_SPOTS.map(([x, z, yaw], i) => makeBoard(x, z, yaw, i));
 if (boards[0]) boards[0].g.visible = false; // no poster board in front of Texture Coffee
-// three empty notice boards along Jl. Dhoho for mission T2 "Poster Drop"
-for (const t of [0.12, 0.45, 0.8]) {
-  const [cx, cz] = dhohoLine(t), [kx, kz] = kerbFront(cx, cz);
-  let ux = kx - cx, uz = kz - cz; const m = Math.hypot(ux, uz) || 1; ux /= m; uz /= m;
-  const b = makeBoard(kx + ux * 1.1, kz + uz * 1.1, Math.atan2(-ux, -uz), boards.length); b.dhoho = true; boards.push(b);
+// three empty notice boards for mission T2 "Poster Drop": on the kerb in front of Aries Motor, Hotel Grand Surya and
+// Texture Coffee, set back from the kerb line and facing the street
+const T2_POSTER = 3; // first Texture poster in POSTERS
+for (const [id, off] of [['aries', -0.3], ['surya', 0.1], [null, 0]]) {
+  let px, pz, nx = 0, nz = -1, f = null; // Texture Coffee: Jl. Wahidin is north of the shop
+  if (id) { f = NAMED.find((n) => n.id === id)?.front; if (!f) continue; nx = f.nx; nz = f.nz; px = f.mx + f.nz * f.L * off + nx * 0.3; pz = f.mz - f.nx * f.L * off + nz * 0.3; } // just off the wall, so kerbFront keeps the shop's side of the road
+  else { px = 33; pz = 7; } // east of the shop pin, before the Dhoho corner
+  const [kx, kz] = kerbFront(px, pz); let bx = kx - nx * 1.1, bz = kz - nz * 1.1;
+  if (f) { const dp = (bx - f.mx) * nx + (bz - f.mz) * nz; if (dp < 1) { bx += nx * (1 - dp); bz += nz * (1 - dp); } } // narrow pavement: stay 1 m off the wall
+  const b = makeBoard(bx, bz, Math.atan2(nx, nz), boards.length); b.t2 = true; boards.push(b);
+  if (b.poster >= 0 && b.poster < T2_POSTER) setBoard(b, T2_POSTER + b.poster); // old saves: garage-sale design -> Texture design
 }
 let nearBoard = null;
 function updatePosterNear() {
