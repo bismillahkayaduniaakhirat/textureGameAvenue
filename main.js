@@ -801,16 +801,10 @@ function buildFrontProps(nb, f) {
     bx(L + 0.4, 0.5, 1.6, white, 0, 3.35, 0.8); bx(L + 0.4, 0.08, 1.6, grey, 0, 3.08, 0.8);
     const board = (txt, x, w) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, 0.42), new THREE.MeshBasicMaterial({ map: canvasTex(128, 24, (c, W, Hh) => { c.fillStyle = '#fbfbf8'; c.fillRect(0, 0, W, Hh); c.fillStyle = '#c8102e'; c.fillRect(W * 0.72, 0, W * 0.28, Hh); c.fillStyle = '#c8102e'; c.font = 'bold 15px monospace'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(txt, W * 0.36, Hh / 2 + 1); }, false) })); m.position.set(x, 3.35, 1.61); g.add(m); };
     board('ARIES', -L * 0.22, 2.8); board('SERVIS', L * 0.3, 2.6);
-    // kerb painted black/white and a utility pole with sagging cables, the corner's signature look
+    // kerb painted black/white, the corner's signature look
     let kz = 1.5; for (; kz < 9; kz += 0.25) { const [wx, wz] = world(0, kz); if (onRoad(wx, wz)) break; }
     const blk = lam({ color: '#1e1e1e' });
     for (let x = -L / 2, i = 0; x < L / 2; x += 0.9, i++) bx(0.9, 0.22, 0.3, i % 2 ? white : blk, x + 0.45, 0.11, kz - 0.15);
-    const pole = lam({ color: '#8d8f8a' }), px = L * 0.12, pz = kz - 0.6;
-    const pm = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.2, 11, 8), pole); pm.position.set(px, 5.5, pz); g.add(pm); solid(px, pz, 0.5, 0.5);
-    bx(0.25, 1.2, 0.12, lam({ color: '#f0c419' }), px, 1.6, pz + 0.2); // yellow band
-    for (const [y, w] of [[10.2, 3.2], [9.2, 2.4], [8.4, 1.8]]) bx(w, 0.14, 0.14, pole, px, y, pz);
-    const wire = lam({ color: '#151515' });
-    for (let i = 0; i < 6; i++) { const y = 8.3 + i * 0.35, b = bx(46, 0.04, 0.04, wire, px, y - 0.4, pz); b.rotation.y = (i - 2.5) * 0.06; }
     // potted plant by the door
     const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.28, 0.6, 8), lam({ color: '#3a3532' })); pot.position.set(L * 0.2, 0.3, kz - 1.2); g.add(pot); solid(L * 0.2, kz - 1.2, 0.7, 0.7);
     const bush = new THREE.Mesh(new THREE.SphereGeometry(0.5, 7, 5), lam({ color: '#4e7a32' })); bush.position.set(L * 0.2, 0.95, kz - 1.2); g.add(bush);
@@ -920,6 +914,47 @@ for (const nb of NAMED) {
 
 finishGrid();
 
+// ---- power lines: concrete poles along the main roads, cables hang from pole to pole (instanced poles, one line mesh) ----
+{
+  const poles = [], wires = [], SP = 30, CAB = [[-1.0, 8.9], [0, 9.3], [1.0, 8.9], [-0.6, 8.0], [0.6, 8.0]];
+  const clear = (x, z) => [[0, 0], [0.3, 0], [-0.3, 0], [0, 0.3], [0, -0.3]].every(([dx, dz]) => !onRoad(x + dx, z + dz));
+  const openSky = (a, b) => { for (let t = 0.15; t < 0.9; t += 0.15) { const k = cellOf(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t); if (k >= 0 && HGT[k] > 7.5) return false; } return true; };
+  for (const r of MAP.roads) {
+    if (r.c > 4 || r.b) continue; const p = r.p, off = r.w / 2 + 1.8; let prev = null, carry = SP * 0.5;
+    for (let i = 0; i < p.length - 2; i += 2) {
+      const ax = p[i], az = p[i + 1], dx = p[i + 2] - ax, dz = p[i + 3] - az, L = Math.hypot(dx, dz); if (L < 0.5) continue;
+      const ux = dx / L, uz = dz / L; let s = carry;
+      for (; s < L; s += SP) {
+        const x = ax + ux * s + uz * off, z = az + uz * s - ux * off;
+        if (poles.length < 900 && freeAt(x, z, 0.6) && clear(x, z)) {
+          const pl = [x, z, uz, -ux]; // position + unit vector across the road (crossarm direction)
+          if (prev && Math.hypot(x - prev[0], z - prev[1]) < SP * 1.6 && openSky(prev, pl)) wires.push([prev, pl]);
+          poles.push(pl); prev = pl; const k = cellOf(x, z); if (k >= 0) OCC[k] = 1;
+        } else prev = null; // gap: cables never jump over a missing pole
+      }
+      carry = s - L;
+    }
+  }
+  if (poles.length) {
+    const shaft = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.12, 0.2, 9.6, 6), lam({ color: '#9a9b95' }), poles.length);
+    const arms = new THREE.InstancedMesh(new THREE.BoxGeometry(2.6, 0.14, 0.14), lam({ color: '#6f706b' }), poles.length * 2);
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), one = new THREE.Vector3(1, 1, 1), sm = new THREE.Vector3(0.6, 1, 1);
+    poles.forEach(([x, z, cx, cz], i) => {
+      e.set(0, Math.atan2(-cz, cx), 0); q.setFromEuler(e);
+      shaft.setMatrixAt(i, m4.compose(new THREE.Vector3(x, 4.8, z), q, one));
+      arms.setMatrixAt(i * 2, m4.compose(new THREE.Vector3(x, 8.9, z), q, one));
+      arms.setMatrixAt(i * 2 + 1, m4.compose(new THREE.Vector3(x, 8.0, z), q, sm));
+    });
+    scene.add(shaft, arms);
+    const v = [], N = 8;
+    for (const [a, b] of wires) for (const [o, y] of CAB) {
+      const p0 = [a[0] + a[2] * o, y, a[1] + a[3] * o], p1 = [b[0] + b[2] * o, y, b[1] + b[3] * o], sag = 0.06 * Math.hypot(p1[0] - p0[0], p1[2] - p0[2]) * 0.25;
+      for (let j = 0; j < N; j++) { for (const t of [j / N, (j + 1) / N]) v.push(p0[0] + (p1[0] - p0[0]) * t, y - sag * 4 * t * (1 - t), p0[2] + (p1[2] - p0[2]) * t); }
+    }
+    const wg = new THREE.BufferGeometry(); wg.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
+    scene.add(new THREE.LineSegments(wg, new THREE.LineBasicMaterial({ color: '#141414' })));
+  }
+}
 // ---- street + park trees (instanced; trunks block movement) ----
 {
   const spots = [];
