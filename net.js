@@ -43,7 +43,7 @@ const MSG = {
   MISI_TERLALU_CEPAT: 'Misi selesai terlalu cepat. Reward ditolak server.',
   ITEM_SUDAH_ADA: 'Item ini sudah kamu punya.',
   KODE_KADALUARSA: 'Kode sudah kadaluarsa (lebih dari 24 jam atau beda Season).',
-  NOMINAL_KECIL: 'Nominal terlalu kecil untuk jadi Tex Coins (min. Rp1.000).',
+  NOMINAL_KECIL: 'Nominal terlalu kecil untuk jadi Tex Coins (min. Rp15.000).',
   JUMLAH_SALAH: 'Jumlah item tidak valid (1-20).',
   BUKAN_ADMIN: 'Akun kasir ini bukan admin.',
 };

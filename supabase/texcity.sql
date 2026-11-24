@@ -20,8 +20,8 @@
 
 -- ---------- settings ----------
 insert into public.game_settings (key, value) values
-  ('fnb_rate',   '4'),     -- Tex Coins per Rp1.000 food & beverage (brief)
-  ('merch_rate', '20'),    -- Tex Coins per Rp1.000 merchandise (brief table says 20, formula said 15: change here)
+  ('fnb_rate',   '10'),    -- Tex Coins per Rp15.000 food & beverage (see rescale_koin.sql)
+  ('merch_rate', '10'),    -- Tex Coins per Rp15.000 merchandise (same as F&B)
   ('receipt_hours', '24'), -- a cashier code must be redeemed within this many hours
   ('mission_rewards', '{"T1":3000,"T2":5000,"T3":6000,"T4":7000,"T5":8000,"T6":9000,"T7":12000,"B1":3000,"B2":3000,"B3":4000}'),
   ('mission_min_secs', '{"T1":15,"T2":25,"T3":40,"T4":40,"T5":60,"T6":25,"T7":25,"B1":8,"B2":3,"B3":25}'),
@@ -398,8 +398,9 @@ begin
     merch := merch + (it ->> 'rp')::int * q;
     clean := clean || jsonb_build_array(jsonb_build_object('id', it ->> 'id', 'qty', q, 'name', it ->> 'name'));
   end loop;
-  coins_f := floor(fnb / 1000.0) * (public.game_setting('fnb_rate') #>> '{}')::int;
-  coins_m := floor(merch / 1000.0) * (public.game_setting('merch_rate') #>> '{}')::int;
+  -- superseded by supabase/rescale_koin.sql (Rp15.000 = 10 coins); keep that file last when re-running
+  coins_f := floor(fnb / 15000.0) * (public.game_setting('fnb_rate') #>> '{}')::int;
+  coins_m := floor(merch / 15000.0) * (public.game_setting('merch_rate') #>> '{}')::int;
   if coins_f + coins_m <= 0 then raise exception 'NOMINAL_KECIL'; end if;
   insert into public.game_receipts (code, kind, points, coins, note, cashier_id, fnb_rp, merch_rp, items, season_id, expires_at)
   values (public.game_code('TEX', 8),
