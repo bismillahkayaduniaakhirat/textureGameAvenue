@@ -122,7 +122,7 @@ document.querySelectorAll('.tabs button').forEach((b) => b.onclick = () => {
   if (b.dataset.t === 'tBoard') loadBoard();
 });
 
-// Tex Coins = floor(Rp / 1000) x rate. The server recomputes everything; this is only the preview.
+// Tex Coins = floor(Rp / coin_unit_rp) x rate (Rp15.000 = 10). The server recomputes everything; this is only the preview.
 const rp = (v) => Number(String(v).replace(/\D/g, '')) || 0;
 const fmt = (n) => Number(n || 0).toLocaleString('id-ID');
 const physical = () => (st?.tex_items || []).filter((i) => i.physical);
@@ -135,7 +135,8 @@ const picked = () => [...$('nItems').querySelectorAll('input')].map((el) => ({ i
 function preview() {
   const fnb = rp($('nFnb').value), items = picked();
   const merch = items.reduce((t, x) => t + (physical().find((i) => i.id === x.id)?.rp || 0) * x.qty, 0);
-  const cf = Math.floor(fnb / 1000) * Number(st?.fnb_rate ?? 4), cm = Math.floor(merch / 1000) * Number(st?.merch_rate ?? 20);
+  const unit = Number(st?.coin_unit_rp ?? 15000);
+  const cf = Math.floor(fnb / unit) * Number(st?.fnb_rate ?? 10), cm = Math.floor(merch / unit) * Number(st?.merch_rate ?? 10);
   $('nPreview').innerHTML = fnb || items.length
     ? `F&amp;B Rp${fmt(fnb)} → <b>${fmt(cf)}</b> · Merch Rp${fmt(merch)} → <b>${fmt(cm)}</b><br>Total: <b>${fmt(cf + cm)} Tex Coins</b>${items.length ? ` + ${items.length} item digital terbuka` : ''}`
     : 'Isi nominal F&amp;B atau jumlah merch.';

@@ -82,7 +82,7 @@ async function load() {
     <table><tr><th>Kode</th><th>Dibuat</th><th class="n">F&amp;B Rp</th><th class="n">Merch Rp</th><th>Item</th><th class="n">Koin</th><th>Status</th></tr>${rc}</table>
   </div>
   <div class="card"><h2>Pengaturan</h2>
-    <p>F&amp;B: <b>${fmt(set.fnb_rate)}</b> koin per Rp1.000 · Merch: <b>${fmt(set.merch_rate)}</b> koin per Rp1.000 · Kode berlaku <b>${fmt(set.receipt_hours)}</b> jam</p>
+    <p>F&amp;B: <b>${fmt(set.fnb_rate)}</b> koin per Rp${fmt(set.coin_unit_rp ?? 15000)} · Merch: <b>${fmt(set.merch_rate)}</b> koin per Rp${fmt(set.coin_unit_rp ?? 15000)} · Kode berlaku <b>${fmt(set.receipt_hours)}</b> jam</p>
     <table><tr><th>Season</th><th>Nama</th><th>Mulai</th><th>Selesai</th></tr>${seasons}</table>
     <p class="muted">Ubah angka di Supabase Table Editor: tabel <code>game_settings</code> (rate, hadiah misi, milestone, katalog merch) dan <code>game_seasons</code> (tanggal season). Game membaca nilai baru saat dibuka ulang.</p>
   </div>`;

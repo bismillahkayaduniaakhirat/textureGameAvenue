@@ -7,28 +7,28 @@ import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
    Edit CONFIG below. Server values (Supabase game_settings) override it.
    ========================================================= */
 const CONFIG = {
-  FNB_RATE: 4, MERCH_RATE: 20, // Tex Coins per Rp1.000 (server: fnb_rate / merch_rate)
+  FNB_RATE: 10, MERCH_RATE: 10, COIN_UNIT_RP: 15000, // Tex Coins per Rp15.000 (server: fnb_rate / merch_rate / coin_unit_rp)
   // mission rewards in Tex Coins (server: mission_rewards; the server pays, this is only for display)
-  REWARD: { T1: 3000, T2: 5000, T3: 6000, T4: 7000, T5: 8000, T6: 9000, T7: 12000, B1: 3000, B2: 3000, B3: 4000 },
+  REWARD: { T1: 1, T2: 2, T3: 2, T4: 3, T5: 3, T6: 4, T7: 5, B1: 1, B2: 1, B3: 2 }, // max 5 per mission
   // T4 orders. Placeholder names: replace with the real Texture Coffee menu.
   MENU: ['Es Kopi Susu Texture', 'Americano', 'Cappuccino', 'Matcha Latte', 'Butter Croffle'],
   MILESTONES: [
-    { n: 1, coins: 250000, prize: 'Jersey OOT-SS25 "Pas Presse de Vivre"' },
-    { n: 2, coins: 300000, prize: 'Kaos OOT-SS26 (hitam atau putih)' },
+    { n: 1, coins: 450, prize: 'Jersey OOT-SS25 "Pas Presse de Vivre"' },
+    { n: 2, coins: 550, prize: 'Kaos OOT-SS26 (hitam atau putih)' },
   ],
   SEASON: { id: 'S1', name: 'Season 1', ends_at: '2027-03-01T00:00:00+07:00' },
   // OOT Wardrobe catalogue (server: tex_items). coins = Wardrobe price.
   ITEMS: [
-    { id: 's1_jersey', season: 'S1', slot: 'outfit', name: 'OOT-SS25 "Pas Presse de Vivre" Jersey', coins: 20000 },
-    { id: 's1_perfume', season: 'S1', slot: 'fragrance', name: 'OOT-SS25 "Roche Seche" Perfume', coins: 15000 },
-    { id: 's1_sun_gray', season: 'S1', slot: 'eyewear', name: 'OOT-SS25 "Vue Seche" Sunglasses Smoked Gray', coins: 10000 },
-    { id: 's1_sun_amber', season: 'S1', slot: 'eyewear', name: 'OOT-SS25 "Vue Seche" Sunglasses Burnt Amber', coins: 10000 },
-    { id: 's1_ring', season: 'S1', slot: 'hand', name: 'OOT-SS25 "Pepouze" Ring', coins: 8000 },
-    { id: 's1_key', season: 'S1', slot: 'keychain', name: 'OOT-SS25 "Accroche Crue" Keychain', coins: 8000 },
-    { id: 's2_tee_black', season: 'S2', slot: 'outfit', name: 'OOT-SS26 "Piece Noir" Tshirt Black', coins: 18000 },
-    { id: 's2_tee_white', season: 'S2', slot: 'outfit', name: 'OOT-SS26 "Chronique" Tshirt White', coins: 18000 },
-    { id: 's2_tumbler', season: 'S2', slot: 'drink', name: 'OOT-SS26 "Achier Recyclee" Tumbler', coins: 12000 },
-    { id: 's2_key', season: 'S2', slot: 'keychain', name: 'OOT-SS26 "Kit Accroche" Keychain', coins: 6000 },
+    { id: 's1_jersey', season: 'S1', slot: 'outfit', name: 'OOT-SS25 "Pas Presse de Vivre" Jersey', coins: 37 },
+    { id: 's1_perfume', season: 'S1', slot: 'fragrance', name: 'OOT-SS25 "Roche Seche" Perfume', coins: 28 },
+    { id: 's1_sun_gray', season: 'S1', slot: 'eyewear', name: 'OOT-SS25 "Vue Seche" Sunglasses Smoked Gray', coins: 18 },
+    { id: 's1_sun_amber', season: 'S1', slot: 'eyewear', name: 'OOT-SS25 "Vue Seche" Sunglasses Burnt Amber', coins: 18 },
+    { id: 's1_ring', season: 'S1', slot: 'hand', name: 'OOT-SS25 "Pepouze" Ring', coins: 15 },
+    { id: 's1_key', season: 'S1', slot: 'keychain', name: 'OOT-SS25 "Accroche Crue" Keychain', coins: 15 },
+    { id: 's2_tee_black', season: 'S2', slot: 'outfit', name: 'OOT-SS26 "Piece Noir" Tshirt Black', coins: 33 },
+    { id: 's2_tee_white', season: 'S2', slot: 'outfit', name: 'OOT-SS26 "Chronique" Tshirt White', coins: 33 },
+    { id: 's2_tumbler', season: 'S2', slot: 'drink', name: 'OOT-SS26 "Achier Recyclee" Tumbler', coins: 22 },
+    { id: 's2_key', season: 'S2', slot: 'keychain', name: 'OOT-SS26 "Kit Accroche" Keychain', coins: 11 },
   ],
 };
 const fmt = (n) => Number(n || 0).toLocaleString('id-ID');
@@ -76,6 +76,7 @@ async function loadSettings() {
     if (Array.isArray(st.milestones)) CONFIG.MILESTONES = st.milestones;
     if (st.fnb_rate) CONFIG.FNB_RATE = +st.fnb_rate;
     if (st.merch_rate) CONFIG.MERCH_RATE = +st.merch_rate;
+    if (st.coin_unit_rp) CONFIG.COIN_UNIT_RP = +st.coin_unit_rp;
   } catch (e) { console.warn(e); }
 }
 loadSettings();
@@ -795,6 +796,20 @@ function buildFrontProps(nb, f) {
     bx(1.0, 0.06, 0.5, lam({ color: '#2f7a3e' }), -L * 0.05, 0.75, 1.5); bx(0.06, 0.75, 0.06, lam({ color: '#2f7a3e' }), -L * 0.05, 0.37, 1.5); // green table
     bx(2.4, 0.4, 0.5, lam({ color: '#8a7a64' }), -L * 0.32, 0.2, 0.5); // bench along the wall
   }
+  if (nb.id === 'aries') {
+    // projecting canopy over the showroom with two white name boards, like the dealer in the photo
+    const white = lam({ color: '#e8eae8' }), grey = lam({ color: '#6e7476' });
+    bx(L + 0.4, 0.5, 1.6, white, 0, 3.35, 0.8); bx(L + 0.4, 0.08, 1.6, grey, 0, 3.08, 0.8);
+    const board = (txt, x, w) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, 0.42), new THREE.MeshBasicMaterial({ map: canvasTex(128, 24, (c, W, Hh) => { c.fillStyle = '#fbfbf8'; c.fillRect(0, 0, W, Hh); c.fillStyle = '#c8102e'; c.fillRect(W * 0.72, 0, W * 0.28, Hh); c.fillStyle = '#c8102e'; c.font = 'bold 15px monospace'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(txt, W * 0.36, Hh / 2 + 1); }, false) })); m.position.set(x, 3.35, 1.61); g.add(m); };
+    board('ARIES', -L * 0.22, 2.8); board('SERVIS', L * 0.3, 2.6);
+    // kerb painted black/white, the corner's signature look
+    let kz = 1.5; for (; kz < 9; kz += 0.25) { const [wx, wz] = world(0, kz); if (onRoad(wx, wz)) break; }
+    const blk = lam({ color: '#1e1e1e' });
+    for (let x = -L / 2, i = 0; x < L / 2; x += 0.9, i++) bx(0.9, 0.22, 0.3, i % 2 ? white : blk, x + 0.45, 0.11, kz - 0.15);
+    // potted plant by the door
+    const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.28, 0.6, 8), lam({ color: '#3a3532' })); pot.position.set(L * 0.2, 0.3, kz - 1.2); g.add(pot); solid(L * 0.2, kz - 1.2, 0.7, 0.7);
+    const bush = new THREE.Mesh(new THREE.SphereGeometry(0.5, 7, 5), lam({ color: '#4e7a32' })); bush.position.set(L * 0.2, 0.95, kz - 1.2); g.add(bush);
+  }
   if (nb.id === 'stasiun') {
     const corrTex = canvasTex(32, 32, (c, W, Hh) => { c.fillStyle = '#5c5550'; c.fillRect(0, 0, W, Hh); for (let x = 0; x < W; x += 4) { c.fillStyle = '#463f3a'; c.fillRect(x, 0, 2, Hh); } });
     corrTex.wrapS = corrTex.wrapT = THREE.RepeatWrapping; corrTex.repeat.set(4, 4);
@@ -889,7 +904,7 @@ for (const nb of NAMED) {
   f.position.set(best.mx + best.nx * 0.06, h / 2, best.mz + best.nz * 0.06); f.rotation.y = Math.atan2(best.nx, best.nz); scene.add(f);
   nb.front = best;
   const extra = nb.id === 'surya' ? buildSurya(nb, best) : null;
-  if (nb.id === 'tropis' || nb.id === 'stasiun') buildFrontProps(nb, best);
+  if (nb.id === 'tropis' || nb.id === 'stasiun' || nb.id === 'aries') buildFrontProps(nb, best);
   if (nb.kind !== 'station') label3D(nb.name, b.cx, extra ? extra.tower + 3 : h + 4, b.cz, nb.accent, nb.fg, 0.8);
   if (nb.kind === 'hotel' && !extra) { // rooftop billboard
     const grey = lam({ color: '#333' }), face = textSign(nb.name, nb.accent, nb.fg, 256, 56, 34);
@@ -900,6 +915,47 @@ for (const nb of NAMED) {
 
 finishGrid();
 
+// ---- power lines: concrete poles along the main roads, cables hang from pole to pole (instanced poles, one line mesh) ----
+{
+  const poles = [], wires = [], SP = 30, CAB = [[-1.0, 8.9], [0, 9.3], [1.0, 8.9], [-0.6, 8.0], [0.6, 8.0]];
+  const clear = (x, z) => [[0, 0], [0.3, 0], [-0.3, 0], [0, 0.3], [0, -0.3]].every(([dx, dz]) => !onRoad(x + dx, z + dz));
+  const openSky = (a, b) => { for (let t = 0.15; t < 0.9; t += 0.15) { const k = cellOf(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t); if (k >= 0 && HGT[k] > 7.5) return false; } return true; };
+  for (const r of MAP.roads) {
+    if (r.c > 4 || r.b) continue; const p = r.p, off = r.w / 2 + 1.8; let prev = null, carry = SP * 0.5;
+    for (let i = 0; i < p.length - 2; i += 2) {
+      const ax = p[i], az = p[i + 1], dx = p[i + 2] - ax, dz = p[i + 3] - az, L = Math.hypot(dx, dz); if (L < 0.5) continue;
+      const ux = dx / L, uz = dz / L; let s = carry;
+      for (; s < L; s += SP) {
+        const x = ax + ux * s + uz * off, z = az + uz * s - ux * off;
+        if (poles.length < 900 && freeAt(x, z, 0.6) && clear(x, z)) {
+          const pl = [x, z, uz, -ux]; // position + unit vector across the road (crossarm direction)
+          if (prev && Math.hypot(x - prev[0], z - prev[1]) < SP * 1.6 && openSky(prev, pl)) wires.push([prev, pl]);
+          poles.push(pl); prev = pl; const k = cellOf(x, z); if (k >= 0) OCC[k] = 1;
+        } else prev = null; // gap: cables never jump over a missing pole
+      }
+      carry = s - L;
+    }
+  }
+  if (poles.length) {
+    const shaft = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.12, 0.2, 9.6, 6), lam({ color: '#9a9b95' }), poles.length);
+    const arms = new THREE.InstancedMesh(new THREE.BoxGeometry(2.6, 0.14, 0.14), lam({ color: '#6f706b' }), poles.length * 2);
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), one = new THREE.Vector3(1, 1, 1), sm = new THREE.Vector3(0.6, 1, 1);
+    poles.forEach(([x, z, cx, cz], i) => {
+      e.set(0, Math.atan2(-cz, cx), 0); q.setFromEuler(e);
+      shaft.setMatrixAt(i, m4.compose(new THREE.Vector3(x, 4.8, z), q, one));
+      arms.setMatrixAt(i * 2, m4.compose(new THREE.Vector3(x, 8.9, z), q, one));
+      arms.setMatrixAt(i * 2 + 1, m4.compose(new THREE.Vector3(x, 8.0, z), q, sm));
+    });
+    scene.add(shaft, arms);
+    const v = [], N = 8;
+    for (const [a, b] of wires) for (const [o, y] of CAB) {
+      const p0 = [a[0] + a[2] * o, y, a[1] + a[3] * o], p1 = [b[0] + b[2] * o, y, b[1] + b[3] * o], sag = 0.06 * Math.hypot(p1[0] - p0[0], p1[2] - p0[2]) * 0.25;
+      for (let j = 0; j < N; j++) { for (const t of [j / N, (j + 1) / N]) v.push(p0[0] + (p1[0] - p0[0]) * t, y - sag * 4 * t * (1 - t), p0[2] + (p1[2] - p0[2]) * t); }
+    }
+    const wg = new THREE.BufferGeometry(); wg.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
+    scene.add(new THREE.LineSegments(wg, new THREE.LineBasicMaterial({ color: '#141414' })));
+  }
+}
 // ---- street + park trees (instanced; trunks block movement) ----
 {
   const spots = [];
