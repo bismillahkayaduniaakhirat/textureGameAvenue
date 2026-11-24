@@ -7,28 +7,28 @@ import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
    Edit CONFIG below. Server values (Supabase game_settings) override it.
    ========================================================= */
 const CONFIG = {
-  FNB_RATE: 4, MERCH_RATE: 20, // Tex Coins per Rp1.000 (server: fnb_rate / merch_rate)
+  FNB_RATE: 10, MERCH_RATE: 10, COIN_UNIT_RP: 15000, // Tex Coins per Rp15.000 (server: fnb_rate / merch_rate / coin_unit_rp)
   // mission rewards in Tex Coins (server: mission_rewards; the server pays, this is only for display)
-  REWARD: { T1: 3000, T2: 5000, T3: 6000, T4: 7000, T5: 8000, T6: 9000, T7: 12000, B1: 3000, B2: 3000, B3: 4000 },
+  REWARD: { T1: 1, T2: 2, T3: 2, T4: 3, T5: 3, T6: 4, T7: 5, B1: 1, B2: 1, B3: 2 }, // max 5 per mission
   // T4 orders. Placeholder names: replace with the real Texture Coffee menu.
   MENU: ['Es Kopi Susu Texture', 'Americano', 'Cappuccino', 'Matcha Latte', 'Butter Croffle'],
   MILESTONES: [
-    { n: 1, coins: 250000, prize: 'Jersey OOT-SS25 "Pas Presse de Vivre"' },
-    { n: 2, coins: 300000, prize: 'Kaos OOT-SS26 (hitam atau putih)' },
+    { n: 1, coins: 450, prize: 'Jersey OOT-SS25 "Pas Presse de Vivre"' },
+    { n: 2, coins: 550, prize: 'Kaos OOT-SS26 (hitam atau putih)' },
   ],
   SEASON: { id: 'S1', name: 'Season 1', ends_at: '2027-03-01T00:00:00+07:00' },
   // OOT Wardrobe catalogue (server: tex_items). coins = Wardrobe price.
   ITEMS: [
-    { id: 's1_jersey', season: 'S1', slot: 'outfit', name: 'OOT-SS25 "Pas Presse de Vivre" Jersey', coins: 20000 },
-    { id: 's1_perfume', season: 'S1', slot: 'fragrance', name: 'OOT-SS25 "Roche Seche" Perfume', coins: 15000 },
-    { id: 's1_sun_gray', season: 'S1', slot: 'eyewear', name: 'OOT-SS25 "Vue Seche" Sunglasses Smoked Gray', coins: 10000 },
-    { id: 's1_sun_amber', season: 'S1', slot: 'eyewear', name: 'OOT-SS25 "Vue Seche" Sunglasses Burnt Amber', coins: 10000 },
-    { id: 's1_ring', season: 'S1', slot: 'hand', name: 'OOT-SS25 "Pepouze" Ring', coins: 8000 },
-    { id: 's1_key', season: 'S1', slot: 'keychain', name: 'OOT-SS25 "Accroche Crue" Keychain', coins: 8000 },
-    { id: 's2_tee_black', season: 'S2', slot: 'outfit', name: 'OOT-SS26 "Piece Noir" Tshirt Black', coins: 18000 },
-    { id: 's2_tee_white', season: 'S2', slot: 'outfit', name: 'OOT-SS26 "Chronique" Tshirt White', coins: 18000 },
-    { id: 's2_tumbler', season: 'S2', slot: 'drink', name: 'OOT-SS26 "Achier Recyclee" Tumbler', coins: 12000 },
-    { id: 's2_key', season: 'S2', slot: 'keychain', name: 'OOT-SS26 "Kit Accroche" Keychain', coins: 6000 },
+    { id: 's1_jersey', season: 'S1', slot: 'outfit', name: 'OOT-SS25 "Pas Presse de Vivre" Jersey', coins: 37 },
+    { id: 's1_perfume', season: 'S1', slot: 'fragrance', name: 'OOT-SS25 "Roche Seche" Perfume', coins: 28 },
+    { id: 's1_sun_gray', season: 'S1', slot: 'eyewear', name: 'OOT-SS25 "Vue Seche" Sunglasses Smoked Gray', coins: 18 },
+    { id: 's1_sun_amber', season: 'S1', slot: 'eyewear', name: 'OOT-SS25 "Vue Seche" Sunglasses Burnt Amber', coins: 18 },
+    { id: 's1_ring', season: 'S1', slot: 'hand', name: 'OOT-SS25 "Pepouze" Ring', coins: 15 },
+    { id: 's1_key', season: 'S1', slot: 'keychain', name: 'OOT-SS25 "Accroche Crue" Keychain', coins: 15 },
+    { id: 's2_tee_black', season: 'S2', slot: 'outfit', name: 'OOT-SS26 "Piece Noir" Tshirt Black', coins: 33 },
+    { id: 's2_tee_white', season: 'S2', slot: 'outfit', name: 'OOT-SS26 "Chronique" Tshirt White', coins: 33 },
+    { id: 's2_tumbler', season: 'S2', slot: 'drink', name: 'OOT-SS26 "Achier Recyclee" Tumbler', coins: 22 },
+    { id: 's2_key', season: 'S2', slot: 'keychain', name: 'OOT-SS26 "Kit Accroche" Keychain', coins: 11 },
   ],
 };
 const fmt = (n) => Number(n || 0).toLocaleString('id-ID');
@@ -76,6 +76,7 @@ async function loadSettings() {
     if (Array.isArray(st.milestones)) CONFIG.MILESTONES = st.milestones;
     if (st.fnb_rate) CONFIG.FNB_RATE = +st.fnb_rate;
     if (st.merch_rate) CONFIG.MERCH_RATE = +st.merch_rate;
+    if (st.coin_unit_rp) CONFIG.COIN_UNIT_RP = +st.coin_unit_rp;
   } catch (e) { console.warn(e); }
 }
 loadSettings();
