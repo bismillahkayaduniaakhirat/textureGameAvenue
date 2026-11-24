@@ -1456,7 +1456,7 @@ function explorerSpots() {
   return s;
 }
 const MDEF = {
-  T1: { name: 'Arrival in Tex City', desc: 'Perjalanan pertamamu. Ikuti checkpoint di Jalan Dhoho sampai billboard selamat datang.', at: () => gatePos(),
+  T1: { name: 'Arrival in Tex City', desc: 'Perjalanan pertamamu. Ikuti checkpoint di Jalan Dhoho sampai billboard selamat datang.', at: () => [CAFE.x + 3, 1.8],
     stages: () => [
       [tgt(dhoho(0.05), { label: 'checkpoint 1', toast: 'Checkpoint 1! Lanjut ke utara.' })],
       [tgt(dhoho(0.3), { label: 'checkpoint 2', say: ['Mantap! Tahan Shift (atau tombol LARI) buat lari.', 'Lihat motor di pinggir jalan? Dekati lalu tekan F atau tombol MOTOR buat naik.'] })],
@@ -1505,7 +1505,7 @@ const markers = new Map();
 const markerCylMat = new THREE.MeshBasicMaterial({ color: '#ffcf3a', transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
 const markerGeo = new THREE.CylinderGeometry(1.1, 1.1, 1.6, 16, 1, true);
 function makeMarker(label, col, mat = markerCylMat) {
-  const grp = new THREE.Group();
+  const grp = new THREE.Group(); grp.userData.marker = true; // hidden during the cutscene
   const cyl = new THREE.Mesh(markerGeo, mat); cyl.position.y = 0.8; grp.add(cyl);
   const tex = canvasTex(32, 32, (g) => { g.fillStyle = col; g.beginPath(); g.arc(16, 16, 15, 0, 7); g.fill(); g.fillStyle = '#000'; g.font = 'bold 20px monospace'; g.textAlign = 'center'; g.fillText(label, 16, 23); });
   const icon = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: true })); icon.position.y = 2.6; icon.scale.setScalar(0.9); grp.add(icon);
@@ -1575,7 +1575,7 @@ async function loadPlaces() {
     const [gx, gz] = latLonToGame(r.lat, r.lon); const [ox, oz] = toOsm(gx, gz);
     if (ox < CX0 || ox > CX1 || oz < CZ0 || oz > CZ1) continue; // outside the playable map
     const [x, z] = kerbFront(gx, gz);
-    const grp = new THREE.Group();
+    const grp = new THREE.Group(); grp.userData.marker = true;
     const cyl = new THREE.Mesh(placeCylGeo, placeCylMat); cyl.position.y = 0.8; grp.add(cyl);
     const icon = new THREE.Sprite(new THREE.SpriteMaterial({ map: placeTex })); icon.position.y = 2.6; icon.scale.setScalar(0.9); grp.add(icon);
     grp.position.set(x, groundY(x, z), z); scene.add(grp);
@@ -1971,11 +1971,13 @@ function faint() {
 function respawn() {
   if (!P.fainted) return;
   $('wasted').classList.add('hidden');
-  const [gx, gz, gh] = gatePos();
+  const [gx, gz, gh] = homePos();
   P.pos.set(gx, 0, gz); P.kx = P.kz = 0; P.vy = 0; P.hp = 100; P.down = 0; P.fall = 0; P.fainted = false; P.heading = gh;
   cam.yaw = gh; P.lastHit = clock.elapsedTime; updateHUD(); toast('HP penuh lagi. Hati-hati di jalan!');
 }
 $('btnRespawn').onclick = respawn;
+// Start / respawn point: Texture Coffee's front door, facing the street (the opening video ends here too)
+const homePos = () => [CAFE.x + 3, 4.2, Math.PI]; // beside the partner pin (20, 5.8), so its card does not pop up at spawn
 // TEX CITY entrance: the CFD gate at the south end of Jl. Dhoho (kerb next to the road, facing north up the street)
 let GATE = null;
 function gatePos() {
@@ -2201,7 +2203,7 @@ $('btnMute').onclick = () => { save.muted = !save.muted; persist(); applyMute();
 $('pYes').onclick = () => { $('prompt').classList.add('hidden'); const id = promptFor; promptFor = null; startMission(id); };
 $('missionQuit').onclick = async () => { if (active && !active.finishing && await ask('Batalkan misi?', 'Progres misi ini hilang. Kamu bisa mulai lagi dari penanda kuning.', 'YA, BATALKAN', 'Lanjut misi')) failMission('Misi dibatalkan'); };
 $('pNo').onclick = () => { $('prompt').classList.add('hidden'); suppress = promptFor; promptFor = null; };
-const paused = () => !started || !$('mapView').classList.contains('hidden') || !$('posterView').classList.contains('hidden') || !$('prompt').classList.contains('hidden') || !$('placeCard').classList.contains('hidden') || !$('store').classList.contains('hidden') || !$('voucher').classList.contains('hidden') || !$('auth').classList.contains('hidden') || !$('wardrobe').classList.contains('hidden');
+const paused = () => !started || !$('mapView').classList.contains('hidden') || !$('posterView').classList.contains('hidden') || !$('prompt').classList.contains('hidden') || !$('placeCard').classList.contains('hidden') || !$('store').classList.contains('hidden') || !$('voucher').classList.contains('hidden') || !$('auth').classList.contains('hidden') || !$('wardrobe').classList.contains('hidden') || CINE.on;
 
 let started = false;
 /* ---------------- account / login ---------------- */
@@ -2299,9 +2301,65 @@ $('btnPlay').onclick = () => {
   started = true; $('title').classList.add('hidden'); $('hud').classList.remove('hidden');
   applyMute(); updateHUD(); ensureBillboard(); applyLook(player, wallet().equip); refreshMarkers(); mpJoin();
   if (document.documentElement.requestFullscreen && isTouch) document.documentElement.requestFullscreen().then(() => screen.orientation?.lock?.('landscape').catch(() => {})).catch(() => {});
-  const [gx, gz, gh] = gatePos(); P.pos.set(gx, 0, gz); P.heading = gh; cam.yaw = gh;
-  playIntro(() => toast(markers.has('T1') ? 'Masuk ke penanda kuning (1) di depanmu untuk mulai misi pertama.' : 'Cari penanda kuning untuk misi berikutnya. OOT Wardrobe (W) ada di Texture Coffee.', 4500));
+  const [gx, gz, gh] = homePos(); P.pos.set(gx, 0, gz); P.heading = gh; cam.yaw = gh;
+  playCutscene(() => playIntro(() => toast(markers.has('T1') ? 'Masuk ke penanda kuning (1) di depanmu untuk mulai misi pertama.' : 'Cari penanda kuning untuk misi berikutnya. OOT Wardrobe (W) ada di Texture Coffee.', 4500)));
 };
+/* ---------------- opening cutscene (follows the OOT "Garage Sale 11.11" video) ---------------- */
+// 1) OOT logo on black  2) sunset fly-in over Kediri down to Texture Coffee  3) low shot: the player walks up to
+// Texture's front  4) title card. Then the normal dialogue intro. SKIP jumps straight to the dialogue.
+const CINE = { on: false, t: 0, shot: -1, done: null, from: null };
+const CINE_SHOTS = [
+  { len: 2.6, card: '<div class="ootOval">OOT</div><div class="cineSub">OUT OF TEX PRESENTS</div>' },
+  { len: 5.0, cap: 'KEDIRI<small>SORE HARI · JAWA TIMUR</small>' },
+  { len: 5.2, cap: 'TEXTURE COFFEE<small>JL. DR. WAHIDIN · MARKAS OOT</small>' },
+  { len: 2.8, card: '<img src="assets/logo.png" alt="Grand Tex Avenue"><div class="cineSub">KEDIRI STORIES</div>' },
+];
+const smooth = (x) => x * x * (3 - 2 * x);
+const cineMarkers = (show) => { for (const o of scene.children) if (o.userData.marker) o.visible = show; playerMarker.visible = show; };
+function playCutscene(done) {
+  cineMarkers(false);
+  Object.assign(CINE, { on: true, t: 0, shot: -1, done, from: [P.pos.x, P.pos.z, P.heading] });
+  $('cine').classList.remove('hidden'); $('hud').classList.add('cineHide');
+  for (const k in keys) keys[k] = false;
+  cineShot(0);
+}
+function cineShot(i) {
+  CINE.shot = i; CINE.t = 0;
+  const s = CINE_SHOTS[i];
+  $('cineCard').innerHTML = s.card || ''; $('cineCard').classList.toggle('off', !s.card);
+  $('cineCap').innerHTML = s.cap || ''; $('cineCap').classList.remove('on');
+  if (s.cap) setTimeout(() => CINE.shot === i && $('cineCap').classList.add('on'), 600);
+  if (i === 2) { P.pos.set(CAFE.x - 5, 0, 1.2); P.heading = Math.atan2(5, 6); } // walk in from the kerb
+  if (i > 0) sfx('whoosh', 0.35);
+}
+function cineUpdate(dt) {
+  const s = CINE_SHOTS[CINE.shot]; CINE.t += dt; const k = clamp(CINE.t / s.len, 0, 1), e = smooth(k);
+  // fade to black around every cut
+  $('cineFade').classList.toggle('on', s.len - CINE.t < 0.4 || (CINE.t < 0.25 && CINE.shot > 0));
+  if (CINE.shot === 1) { // high sunset sweep that settles on Texture Coffee's roof
+    const a = lerp(-2.3, -1.55, e), r = lerp(75, 26, e);
+    camera.position.set(CAFE.x + Math.cos(a) * r, lerp(46, 14, e), CAFE.z + Math.sin(a) * r);
+    camera.lookAt(CAFE.x, lerp(0, 3, e), CAFE.z - 4);
+  } else if (CINE.shot === 2) { // low front shot, the player strolls to the door
+    const sp = k < 0.85 ? 1.6 : 0; P.speed = sp; P.grounded = true;
+    P.pos.x += Math.sin(P.heading) * sp * dt; P.pos.z += Math.cos(P.heading) * sp * dt;
+    const sx = Math.sin(P.heading), sz = Math.cos(P.heading), back = lerp(5.5, 3.6, e);
+    camera.position.set(P.pos.x - sx * back + sz * 0.8, lerp(1.1, 1.7, e), P.pos.z - sz * back - sx * 0.8);
+    camera.lookAt(P.pos.x + sx * 6, lerp(2.6, 1.9, e), P.pos.z + sz * 6);
+  } else if (CINE.shot === 0 || CINE.shot === 3) {
+    camera.position.set(CAFE.x, 9, -14); camera.lookAt(CAFE.x, 3, CAFE.z);
+  }
+  if (CINE.t >= s.len) { if (CINE.shot + 1 < CINE_SHOTS.length) cineShot(CINE.shot + 1); else cineEnd(); }
+}
+function cineEnd() {
+  if (!CINE.on) return;
+  CINE.on = false; P.speed = 0; cineMarkers(true);
+  const [x, z, h] = CINE.from; P.pos.set(x, 0, z); P.heading = h; cam.yaw = h; cam.lastDrag = -10;
+  $('cine').classList.add('hidden'); $('cineFade').classList.remove('on'); $('hud').classList.remove('cineHide');
+  const d = CINE.done; CINE.done = null; d?.();
+}
+$('cineSkip').onclick = (e) => { e.stopPropagation(); cineEnd(); };
+
 /* ---------------- intro (dialogue box, Harvest Moon-like pacing) ---------------- */
 // Shown every time the game starts; returning players can press SKIP INTRO.
 const INTRO_SPEAKER = 'Mas Tex';
@@ -2350,20 +2408,84 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) bgm.p
 
 /* ---------------- OOT Wardrobe (Texture Coffee) ---------------- */
 const SLOTS = [['outfit', 'Outfit'], ['eyewear', 'Kacamata'], ['fragrance', 'Parfum'], ['hand', 'Cincin'], ['keychain', 'Keychain'], ['drink', 'Tumbler']];
-const WR = { open: false, skip: false, slot: 'outfit', preview: null, yaw: 0 };
+const WR = { open: false, skip: false, slot: 'outfit', preview: null, view: null };
+// product shots for the catalogue; items without a photo get a drawn icon
+const WR_IMG = { s1_jersey: 'assets/jersey.jpg', s1_perfume: 'assets/parfum.jpg', s1_sun_gray: 'assets/kacamata.jpg', s1_sun_amber: 'assets/kacamata.jpg', s1_ring: 'assets/cincin.jpg' };
+const wrIcon = (() => {
+  const cache = {};
+  const draw = (id) => {
+    const c = document.createElement('canvas'); c.width = c.height = 96; const g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, 96, 96); g.lineWidth = 3; g.strokeStyle = '#111';
+    const tee = (fill, ink, txt) => {
+      g.fillStyle = fill; g.beginPath(); g.moveTo(30, 18); g.lineTo(12, 30); g.lineTo(20, 44); g.lineTo(28, 40); g.lineTo(28, 80); g.lineTo(68, 80); g.lineTo(68, 40); g.lineTo(76, 44); g.lineTo(84, 30); g.lineTo(66, 18); g.quadraticCurveTo(48, 30, 30, 18); g.closePath(); g.fill(); g.stroke();
+      if (txt) { g.fillStyle = ink; g.font = 'bold 8px monospace'; g.textAlign = 'center'; g.fillText(txt, 48, 50); }
+    };
+    if (id === '') tee('#eeece6');
+    else if (id === 's2_tee_black') tee('#18181b', '#eee', 'PIECE NOIR');
+    else if (id === 's2_tee_white') tee('#f2f0ea', '#111', 'CHRONIQUE');
+    else if (id === 's2_tumbler') { g.fillStyle = '#b8bcc2'; g.fillRect(34, 20, 28, 62); g.strokeRect(34, 20, 28, 62); g.fillStyle = '#555'; g.fillRect(32, 14, 32, 8); }
+    else { // keychains
+      g.beginPath(); g.arc(48, 26, 11, 0, Math.PI * 2); g.stroke();
+      g.fillStyle = id === 's1_key' ? '#b3262a' : '#1a1a1e'; g.fillRect(36, 38, 24, 40); g.strokeRect(36, 38, 24, 40);
+      g.fillStyle = '#fff'; g.font = 'bold 9px monospace'; g.textAlign = 'center'; g.fillText('OOT', 48, 62);
+    }
+    return c.toDataURL();
+  };
+  return (id) => WR_IMG[id] || (cache[id] ??= draw(id));
+})();
+// separate little renderer for the shop preview, so the player is never hidden behind the menu
+function wrViewInit() {
+  if (WR.view) return WR.view;
+  const cv = $('wrView');
+  const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true });
+  r.setPixelRatio(Math.min(devicePixelRatio, 2)); r.outputColorSpace = renderer.outputColorSpace;
+  const sc = new THREE.Scene();
+  sc.add(new THREE.HemisphereLight('#fff1dc', '#3a2418', 1.6));
+  const key = new THREE.DirectionalLight('#ffd7a8', 2.0); key.position.set(2, 4, 4); sc.add(key);
+  const rim = new THREE.DirectionalLight('#9fb8ff', 0.8); rim.position.set(-3, 3, -3); sc.add(rim);
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(0.9, 32), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0.35 }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = 0.01; sc.add(floor);
+  const ch = makeChar({ build: { h: 1.03, w: 1.02 } }); sc.add(ch.group);
+  const c = new THREE.PerspectiveCamera(26, 1, 0.1, 50);
+  const v = WR.view = { r, sc, c, ch, rot: 0, vel: 0, drag: null, idle: 0, w: 0, h: 0, t: 0 };
+  cv.addEventListener('pointerdown', (e) => { v.drag = e.clientX; v.idle = 0; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener('pointermove', (e) => { if (v.drag == null) return; v.rot += (e.clientX - v.drag) * 0.012; v.drag = e.clientX; });
+  const up = () => { v.drag = null; v.idle = 0; };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  return v;
+}
+function wrViewRender(dt) {
+  const v = WR.view; if (!v) return;
+  const cv = $('wrView'), w = cv.clientWidth, h = cv.clientHeight; if (!w || !h) return;
+  if (w !== v.w || h !== v.h) { v.w = w; v.h = h; v.r.setSize(w, h, false); v.c.aspect = w / h; v.c.updateProjectionMatrix(); }
+  // frame the whole body: a narrow stage needs the camera further back
+  const tn = Math.tan(THREE.MathUtils.degToRad(13)), fit = Math.max(1.25 / tn, 0.75 / (tn * v.c.aspect));
+  v.c.position.set(0, 1.05, fit); v.c.lookAt(0, 0.98, 0);
+  v.t += dt; if (v.drag == null && (v.idle += dt) > 2.5) v.rot = lerp(v.rot, Math.round(v.rot / (Math.PI * 2)) * Math.PI * 2, Math.min(1, dt * 2)); // drift back to the front
+  v.ch.group.rotation.set(0, v.rot + Math.sin(v.t * 0.6) * 0.12, 0);
+  animChar(v.ch, 0, dt); v.ch.parts.torso.rotation.x = Math.sin(v.t * 1.6) * 0.015; // standing, breathing
+  for (const s of SPARKLES) s.rotation.y += dt * 1.6;
+  v.r.render(v.sc, v.c);
+}
+function wrShowLook() {
+  const v = wrViewInit(), look = WR.preview || wallet().equip || {};
+  applyLook(v.ch, look);
+  const names = Object.values(look).map((id) => ITEM(id)?.name).filter(Boolean);
+  $('wrNow').textContent = (WR.preview ? 'COBA: ' : 'DIPAKAI: ') + (names.length ? names.join(' + ') : 'Kaos Putih Polos');
+}
 function openWardrobe() {
-  WR.open = true; WR.skip = true; WR.preview = null; WR.yaw = cam.yaw;
-  cam.yaw = P.heading + Math.PI; WR.pitch = cam.pitch; cam.pitch = 0.18; // camera in front, so the player sees the outfit
+  WR.open = true; WR.skip = true; WR.preview = null;
   wrMarker.grp.visible = false;
   for (const k in keys) keys[k] = false;
-  $('wardrobe').classList.remove('hidden'); renderWardrobe(); updateHUD();
+  $('wardrobe').classList.remove('hidden'); $('hud').classList.add('shopHide');
+  sfx('whoosh', 0.5); wrViewInit(); WR.view.rot = 0; renderWardrobe(); wrShowLook(); updateHUD();
 }
 function closeWardrobe() {
-  WR.open = false; WR.preview = null; $('wardrobe').classList.add('hidden'); cam.yaw = WR.yaw; cam.pitch = WR.pitch; wrMarker.grp.visible = true;
+  WR.open = false; WR.preview = null; $('wardrobe').classList.add('hidden'); $('hud').classList.remove('shopHide'); wrMarker.grp.visible = true;
   applyLook(player, wallet().equip);
 }
 function renderWardrobe() {
-  const w = wallet(), own = new Set(w.items), eq = { ...(w.equip || {}) }, slot = WR.slot;
+  const w = wallet(), own = new Set(w.items), eq = { ...(w.equip || {}) }, slot = WR.slot, tryId = WR.preview ? (WR.preview[slot] ?? '') : null;
   $('wrSlots').innerHTML = SLOTS.map(([k, n]) => `<button data-s="${k}" class="${k === slot ? 'on' : ''}">${n}</button>`).join('');
   for (const b of $('wrSlots').querySelectorAll('button')) b.onclick = () => { WR.slot = b.dataset.s; renderWardrobe(); };
   const list = CONFIG.ITEMS.filter((i) => i.slot === slot && i.digital !== false);
@@ -2371,18 +2493,18 @@ function renderWardrobe() {
   const box = $('wrList'); box.innerHTML = list.length ? '' : '<p class="muted">Belum ada item.</p>';
   for (const it of list) {
     const has = it.base || own.has(it.id), on = it.base ? !eq.outfit : eq[slot] === it.id;
-    const row = document.createElement('div'); row.className = 'vrow wr' + (on ? ' on' : '');
-    const sub = it.base ? 'Gratis' : `${esc(it.season || '')} · ${has ? 'Dimiliki' : `◉ ${fmt(it.coins)}`}`;
-    const act = on ? (it.base ? '<button class="sm" disabled>DIPAKAI</button>' : '<button class="sm" data-a="off">LEPAS</button>')
-      : has ? '<button class="sm" data-a="on">PAKAI</button>' : `<button class="sm" data-a="buy" ${w.available < it.coins ? 'disabled' : ''}>BELI</button>`;
-    row.innerHTML = `<div>${esc(it.name)}<br><span class="muted">${sub}</span></div><div class="wrBtns"><button class="ghost sm" data-a="try">COBA</button>${act}</div>`;
-    for (const b of row.querySelectorAll('button[data-a]')) b.onclick = () => wrAction(b.dataset.a, it, eq);
-    box.appendChild(row);
+    const card = document.createElement('div'); card.className = 'shopItem' + (on ? ' on' : '') + (tryId === (it.id || '') ? ' try' : '');
+    const price = it.base ? 'GRATIS' : has ? 'DIMILIKI' : `◉ ${fmt(it.coins)}`;
+    const act = on ? (it.base ? '<button disabled>DIPAKAI</button>' : '<button data-a="off" class="ghost">LEPAS</button>')
+      : has ? '<button data-a="on">PAKAI</button>' : `<button data-a="buy" ${w.available < it.coins ? 'disabled' : ''}>BELI</button>`;
+    card.innerHTML = `<img alt="" src="${wrIcon(it.id)}" style="${it.id === 's1_sun_amber' ? 'filter:sepia(1) saturate(4) hue-rotate(-12deg)' : ''}"><div class="nm">${esc(it.name)}</div><div class="pr">${price}</div><div class="st">${it.base ? '' : esc(it.season || '')}</div>${act}`;
+    card.onclick = (e) => { const b = e.target.closest('button[data-a]'); wrAction(b ? b.dataset.a : 'try', it, eq); };
+    box.appendChild(card);
   }
 }
 async function wrAction(a, it, eq) {
   const slot = WR.slot;
-  if (a === 'try') { WR.preview = { ...eq, [slot]: it.id || undefined }; applyLook(player, WR.preview); return; }
+  if (a === 'try') { WR.preview = { ...eq, [slot]: it.id || undefined }; for (const k of Object.keys(WR.preview)) if (!WR.preview[k]) delete WR.preview[k]; wrShowLook(); renderWardrobe(); if (WR.view) WR.view.idle = 0; return; }
   if (a === 'on') return setEquip({ ...eq, [slot]: it.id || undefined });
   if (a === 'off') return setEquip({ ...eq, [slot]: undefined });
   if (a !== 'buy') return;
@@ -2401,7 +2523,7 @@ async function setEquip(eq) {
   if (online()) { try { await NET.equip(eq); await refreshMe(); } catch (e) { toast(NET.errText(e), 3200); } }
   else { save.tex.equip = eq; persist(); }
   WR.preview = null; applyLook(player, wallet().equip); MP.sendT = 0; MP.last = '';
-  renderWardrobe(); updateHUD();
+  renderWardrobe(); if (WR.open) wrShowLook(); updateHUD();
 }
 $('wrClose').onclick = closeWardrobe;
 
@@ -2662,7 +2784,7 @@ function update(dt) {
 function place(dt) {
   // player visuals
   player.group.position.copy(P.pos);
-  playerMarker.visible = !arrow.visible && !WR.open;
+  playerMarker.visible = !arrow.visible && !WR.open && !CINE.on;
   updatePosterNear();
   playerMarker.position.y = 2.55 + Math.sin(performance.now() * 0.004) * 0.08;
   playerMarker.rotation.y += dt * 2;
@@ -2683,8 +2805,8 @@ function place(dt) {
   for (const b of bikes) { b.group.position.copy(b.pos); b.group.rotation.set(0, b.heading, 0); b.group.rotateZ(b.lean); }
 
   // camera
-  const dist = P.onBike ? 8 : WR.open ? 3.2 : cam.dist;
-  const target = tmpV.set(P.pos.x, P.pos.y + (WR.open ? 1.0 : 1.55), P.pos.z);
+  const dist = P.onBike ? 8 : cam.dist;
+  const target = tmpV.set(P.pos.x, P.pos.y + 1.55, P.pos.z);
   const cp = Math.cos(cam.pitch);
   const want = new THREE.Vector3(target.x - Math.sin(cam.yaw) * dist * cp, target.y + Math.sin(cam.pitch) * dist, target.z - Math.cos(cam.yaw) * dist * cp);
   const dirv = want.clone().sub(target); const len = dirv.length(); dirv.divideScalar(len);
@@ -2709,13 +2831,15 @@ function areaName() {
 function loop() {
   const dt = Math.min(0.05, clock.getDelta());
   if (!paused()) update(dt);
-  place(paused() && !WR.open ? 0 : dt);
+  place(paused() && !CINE.on ? 0 : dt);
+  if (CINE.on) cineUpdate(dt);
   riverTex.offset.y -= dt * 0.05; // Brantas flows north
   skyGroup.position.set(camera.position.x, 0, camera.position.z);
   if (mapOpen()) drawMap();
   if ((areaT -= dt) < 0) { areaT = 0.4; const a = areaName(); if (a !== areaLast) { areaLast = a; $('areaName').textContent = a; } }
-  renderer.render(scene, camera);
-  if (started) drawRadar();
+  if (WR.open) wrViewRender(dt); // the shop covers the whole screen: draw only the preview
+  else renderer.render(scene, camera);
+  if (started && !WR.open) drawRadar();
   requestAnimationFrame(loop);
 }
 // initial camera
@@ -2723,5 +2847,5 @@ camera.position.set(20, 4, -2); camera.lookAt(20, 2, 10);
 updateHUD();
 loop();
 // debug handle (handy for QA in a background tab)
-window.__oot = { MAP, get OCC() { return OCC; }, cellOf, EDGES, PLACES, TRAIN, NAMED, toGame, toOsm, heightAt, freeAt, openMap, cars, areaName, roadNameAt, boards, openPoster, get nearBoard() { return nearBoard; }, P, get bike() { return bike; }, bikes, riders, npcs, hitPlayer, cam, save, keys, startMission, finishMission, toggleBike, applyLook, player, MDEF, markers, refreshMarkers, MP, wallet, say, get active() { return active; },
+window.__oot = { MAP, get OCC() { return OCC; }, cellOf, EDGES, PLACES, TRAIN, NAMED, toGame, toOsm, heightAt, freeAt, openMap, cars, areaName, roadNameAt, boards, openPoster, get nearBoard() { return nearBoard; }, P, get bike() { return bike; }, bikes, riders, npcs, hitPlayer, cam, save, keys, playCutscene, openWardrobe, closeWardrobe, startMission, finishMission, toggleBike, applyLook, player, MDEF, markers, refreshMarkers, MP, wallet, say, get active() { return active; },
   step(n = 1, dt = 1 / 30) { for (let i = 0; i < n; i++) { if (!paused()) update(dt); place(dt); } renderer.render(scene, camera); drawRadar(); } };
