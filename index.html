@@ -83,17 +83,35 @@
 </div>
 
 <!-- OOT Wardrobe (Texture Coffee) -->
-<div id="wardrobe" class="modal side hidden">
-  <div class="card">
-    <div class="storeHead">
-      <div><div class="tag">TEXTURE COFFEE</div><h2>OOT WARDROBE</h2></div>
-      <div class="pill"><span class="coinIcon">◉</span> <span id="wrCoins">0</span></div>
+<!-- OOT Wardrobe: full-screen shop inside Texture Coffee, catalogue + a separate 3D preview of the player -->
+<div id="wardrobe" class="hidden">
+  <div class="shopBar"><span class="ootRow"></span><b>OUTOFTEX</b><span class="ootRow"></span></div>
+  <div class="shopBody">
+    <div class="shopPanel">
+      <div class="shopHead">
+        <div><div class="tag">TEXTURE COFFEE</div><h2>OOT WARDROBE</h2></div>
+        <div class="pill"><span class="coinIcon">◉</span> <span id="wrCoins">0</span></div>
+      </div>
+      <div id="wrSlots" class="tabs"></div>
+      <div id="wrList" class="shopGrid"></div>
+      <p class="shopNote">Ketuk item untuk mencoba. Beli pakai Tex Coins; koin tambahan dari voucher fisik Texture Coffee.</p>
     </div>
-    <div id="wrSlots" class="tabs"></div>
-    <div id="wrList" class="vlist"></div>
-    <p class="muted">Beli item digital pakai Tex Coins. Dapat koin tambahan dari voucher fisik Texture Coffee.</p>
-    <button id="wrClose" class="ghost full">Selesai</button>
+    <div class="shopStage">
+      <canvas id="wrView"></canvas>
+      <div id="wrNow" class="stageTag"></div>
+      <div class="stageHint">geser untuk memutar</div>
+    </div>
   </div>
+  <button id="wrClose" class="shopExit">KELUAR ✕</button>
+</div>
+
+<!-- opening cutscene (letterbox) -->
+<div id="cine" class="hidden">
+  <div class="cineBar top"></div><div class="cineBar bot"></div>
+  <div id="cineCard"></div>
+  <div id="cineCap"></div>
+  <div id="cineFade"></div>
+  <button id="cineSkip">SKIP ››</button>
 </div>
 
 <!-- Store -->
