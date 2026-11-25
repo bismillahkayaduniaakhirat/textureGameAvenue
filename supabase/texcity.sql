@@ -450,7 +450,7 @@ begin
     'receipts_redeemed', (select count(*) from public.game_receipts where season_id = s and redeemed_at is not null),
     'receipt_coins', (select coalesce(sum(coins), 0) from public.game_receipts where season_id = s and redeemed_at is not null),
     'missions', (select json_object_agg(mission_id, n) from (select mission_id, count(*) n from public.game_missions_done group by 1) m),
-    'milestones', (select json_agg(json_build_object('season', w.season_id, 'n', w.n, 'prize', w.prize, 'name', p.name, 'phone', p.phone,
+    'milestones', (select json_agg(json_build_object('season', w.season_id, 'n', w.n, 'prize', w.prize, 'name', p.name, 'phone', p.phone, 'email', p.email,
                      'earned', w.earned, 'reached_at', w.reached_at, 'handed_at', w.handed_at) order by w.season_id, w.n)
                      from public.game_milestone_winners w join public.game_players p on p.id = w.player_id),
     'receipts', (select json_agg(t) from (
@@ -462,7 +462,7 @@ begin
          where r.season_id is not null
          order by r.created_at desc limit 60) t),
     'settings', (select json_object_agg(key, value) from public.game_settings
-                  where key in ('fnb_rate', 'merch_rate', 'receipt_hours', 'mission_rewards', 'milestones', 'tex_items')));
+                  where key in ('fnb_rate', 'merch_rate', 'receipt_hours', 'mission_rewards', 'milestones', 'tex_items', 'notify_email', 'notify_webhook')));
 end $$;
 
 -- ---------- grants ----------

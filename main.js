@@ -19,6 +19,8 @@ const CONFIG = {
     { n: 2, coins: 550, prize: 'Kaos OOT-SS26 (hitam atau putih)' },
   ],
   SEASON: { id: 'S1', name: 'Season 1', ends_at: '2027-03-01T00:00:00+07:00' },
+  NOTIFY_EMAIL: '',      // set in Supabase game_settings ('notify_email') to receive milestone winner alerts via FormSubmit
+  NOTIFY_WEBHOOK: '',    // or set ('notify_webhook') to POST milestone winner JSON to Google Apps Script / webhook
   // OOT Wardrobe catalogue (server: tex_items). coins = Wardrobe price.
   ITEMS: [
     { id: 's1_jersey', season: 'S1', slot: 'outfit', name: 'OOT-SS25 "Pas Presse de Vivre" Jersey', coins: 37 },
@@ -43,6 +45,18 @@ try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY) || '{}')); }
 // progress without an account (guest): kept in this browser only
 save.tex = Object.assign({ earned: 0, spent: 0, done: [], items: [], equip: {} }, save.tex || {});
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
+function rescaleGuestTex() { // migrate old pre-v1.1.0 guest saves (e.g. T1 = 3000 coins) to the current coin scale
+  const t = save.tex; if (!t || !Array.isArray(t.done)) return;
+  const maxPossible = Object.values(CONFIG.REWARD).reduce((a, b) => a + (+b || 0), 0);
+  const expectedEarned = t.done.reduce((s, id) => s + (+CONFIG.REWARD[id] || 0), 0);
+  if (t.earned > maxPossible || t.earned !== expectedEarned) {
+    t.earned = expectedEarned;
+    const eqCost = (t.items || []).reduce((s, id) => s + (ITEM(id)?.coins || 0), 0);
+    t.spent = Math.min(t.earned, eqCost);
+    persist();
+  }
+}
+rescaleGuestTex();
 /* ---------------- online (Supabase) ---------------- */
 // If the online layer cannot load (offline, blocked CDN), the game keeps the
 // progress in this browser so it still plays.
@@ -73,12 +87,15 @@ async function loadSettings() {
   if (!NET) return;
   try {
     const st = await NET.settings();
-    if (st.mission_rewards) Object.assign(CONFIG.REWARD, st.mission_rewards);
-    if (Array.isArray(st.tex_items)) CONFIG.ITEMS = st.tex_items;
-    if (Array.isArray(st.milestones)) CONFIG.MILESTONES = st.milestones;
+    if (st.mission_rewards && (+st.mission_rewards.T1 || 0) <= 50) Object.assign(CONFIG.REWARD, st.mission_rewards);
+    if (Array.isArray(st.tex_items) && (+st.tex_items[0]?.coins || 0) <= 500) CONFIG.ITEMS = st.tex_items;
+    if (Array.isArray(st.milestones) && (+st.milestones[0]?.coins || 0) <= 5000) CONFIG.MILESTONES = st.milestones;
     if (st.fnb_rate) CONFIG.FNB_RATE = +st.fnb_rate;
     if (st.merch_rate) CONFIG.MERCH_RATE = +st.merch_rate;
     if (st.coin_unit_rp) CONFIG.COIN_UNIT_RP = +st.coin_unit_rp;
+    if (typeof st.notify_email === 'string') CONFIG.NOTIFY_EMAIL = st.notify_email.trim();
+    if (typeof st.notify_webhook === 'string') CONFIG.NOTIFY_WEBHOOK = st.notify_webhook.trim();
+    rescaleGuestTex();
   } catch (e) { console.warn(e); }
 }
 loadSettings();
@@ -2159,7 +2176,33 @@ function milestoneCheck() {
   const w = wallet(); if (!w.milestone) return;
   const key = `${w.season?.id}-${w.milestone.n}`; if (save.msSeen === key) return;
   save.msSeen = key; persist();
+  notifyMilestoneWin(w);
   setTimeout(() => say([`Selamat! Kamu pemenang Milestone ${w.milestone.n}: ${w.milestone.prize}.`, 'Tim OOT akan menghubungi kamu lewat nomor HP yang terdaftar. Bisa juga DM Instagram OOT.']), 3300);
+}
+function notifyMilestoneWin(w) {
+  const m = ON.me || {}, ms = w.milestone || {}, s = w.season?.name || w.season?.id || CONFIG.SEASON.name;
+  const payload = {
+    _subject: `[TEX CITY] Pemenang Milestone #${ms.n} (${s}): ${m.name || 'Pemain'}`,
+    season: s,
+    milestone: `#${ms.n} - ${ms.prize || ''}`,
+    player_name: m.name || '-',
+    player_phone: m.phone || '-',
+    player_email: m.email || '-',
+    earned_coins: w.earned ?? '-',
+    reached_at: ms.reached_at || new Date().toISOString(),
+  };
+  if (CONFIG.NOTIFY_EMAIL) {
+    fetch(`https://formsubmit.co/ajax/${encodeURIComponent(CONFIG.NOTIFY_EMAIL)}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(payload),
+    }).catch(() => {});
+  }
+  if (CONFIG.NOTIFY_WEBHOOK) {
+    fetch(CONFIG.NOTIFY_WEBHOOK, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).catch(() => {});
+  }
 }
 function updateMission(dt) {
   const a = active; if (!a || a.finishing) return;

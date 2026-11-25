@@ -53,7 +53,7 @@ async function load() {
   try { d = await NET.kAdmin(); } catch (e) { out.innerHTML = `<div class="card err">${esc(NET.errText(e))}</div>`; return; }
   const s = d.season || {}, set = d.settings || {}, rw = set.mission_rewards || {};
   const missions = Object.keys(rw).map((id) => `<tr><td>${id}</td><td class="n">${fmt(rw[id])}</td><td class="n">${fmt(d.missions?.[id] || 0)}</td></tr>`).join('');
-  const ms = (d.milestones || []).map((m) => `<tr><td>${esc(m.season)} #${m.n}</td><td>${esc(m.prize)}</td><td>${esc(m.name)}<br><span class="muted">${esc(m.phone)}</span></td><td class="n">${fmt(m.earned)}</td><td>${dt(m.reached_at)}</td><td>${m.handed_at ? dt(m.handed_at) : '<b>belum</b>'}</td></tr>`).join('')
+  const ms = (d.milestones || []).map((m) => `<tr><td>${esc(m.season)} #${m.n}</td><td>${esc(m.prize)}</td><td>${esc(m.name)}<br><span class="muted">${esc(m.phone)}${m.email ? ' · ' + esc(m.email) : ''}</span></td><td class="n">${fmt(m.earned)}</td><td>${dt(m.reached_at)}</td><td>${m.handed_at ? dt(m.handed_at) : '<b>belum</b>'}</td></tr>`).join('')
     || '<tr><td colspan="6" class="muted">Belum ada pemenang.</td></tr>';
   const rc = (d.receipts || []).map((r) => `<tr><td>${esc(r.code)}</td><td>${dt(r.created_at)}<br><span class="muted">${esc(r.cashier)}</span></td><td class="n">${fmt(r.fnb_rp)}</td><td class="n">${fmt(r.merch_rp)}</td><td>${(r.items || []).map((x) => esc(x.name) + (x.qty > 1 ? ' x' + x.qty : '')).join(', ')}</td><td class="n">${fmt(r.coins)}</td><td>${r.redeemed_at ? esc(r.player) + '<br><span class="muted">' + dt(r.redeemed_at) + '</span>' : new Date(r.expires_at) < new Date() ? '<span class="muted">kadaluarsa</span>' : 'menunggu'}</td></tr>`).join('')
     || '<tr><td colspan="7" class="muted">Belum ada kode.</td></tr>';
@@ -73,6 +73,7 @@ async function load() {
   </div>
   <div class="card"><h2>Milestone</h2>
     <table><tr><th>Season</th><th>Hadiah</th><th>Pemenang</th><th class="n">Earned</th><th>Tercapai</th><th>Diserahkan</th></tr>${ms}</table>
+    <p class="muted">Notif email otomatis pemenang Milestone: isi key <code>notify_email</code> (misal <code>"texture@gmail.com"</code>) atau <code>notify_webhook</code> di tabel <code>game_settings</code>${set.notify_email ? ` · Aktif: <b>${esc(set.notify_email)}</b>` : ''}.</p>
     <p class="muted">Tandai hadiah sudah diserahkan: Supabase Table Editor, tabel <code>game_milestone_winners</code>, isi kolom <code>handed_at</code>.</p>
   </div>
   <div class="card"><h2>Misi</h2>
