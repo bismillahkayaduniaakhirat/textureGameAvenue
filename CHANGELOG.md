@@ -3,6 +3,26 @@
 Grand Tex Avenue – Kediri Stories (TEX CITY). Versions follow `MAJOR.MINOR.PATCH`.
 The version lives in `VERSION`, `GAME_VERSION` in `main.js` and the `main.js?v=` tag in `index.html`.
 
+## [1.4.0] - 2026-11-25
+
+### Added
+- Gereja Filadelfia Pantekosta (`GPdI Filadelfia`) on Jl. Dr. Setiabudi: hand-drawn church facade facing east, rooftop name board, map/radar pin, and Mission T5 (`Kediri Heritage Walk`) stage 3 replacing Toko Roti Orion.
+- Toko Kopi Rukun Warga and ST 18 along Jl. Stasiun with custom facades, 3D front props, roof boards, and map pins.
+- Two-door city EVs parked at Texture Coffee, Stasiun Kediri, Aries Motor, and Setiabudi 6AM / Tropis corner (roadside, clear of NPC traffic lanes).
+- 3D merch models on characters (shades, keychains, tumbler, ring, fragrance sparkles) and new Season 1/2 tee & jersey textures.
+- Punching (`Q` / `PUKUL`): cartoon jab against NPCs (flinch, knockback, chase & hit back, fall after 3 hits) and other players via the room channel, with safe zones at Texture Coffee and the starting crossroads.
+
+### Changed
+- Multiplayer room capacity raised from 20 to 50 players per room (`texcity-N`), with automatic overflow to the next room from player 51 onward.
+- Spinning Texture logo in the opening cutscene, updated title screen logo without script text, and two-sided "WELCOME TO TEX CITY" billboard with the red Texture emblem behind the headline.
+- Mission T2 (`Poster Drop`) uses 3 Texture Coffee posters at Aries Motor, Hotel Grand Surya, and Texture Coffee; Mission T4 (`Order Delivery`) uses the real Texture Coffee menu (Caffe Latte, Cocoa Berry, Papa Katsu, Indomie ala Cak Su, Chips & Crave).
+- Game starts at the north Jl. Dhoho crossroads; respawning after fainting places the player at Texture Coffee.
+- Tropis Coffee faces east onto Jl. Dr. Setiabudi; portrait touch controls tidied.
+
+### Fixed
+- Footprint corners encroaching onto streets are pulled back to the kerb so buildings no longer block roads.
+- Held movement keys and touch stick reset properly on faint, respawn, window blur, and tab hide.
+
 ## [1.3.0] - 2026-11-24
 
 Client revision (REVISI GRAND TEX AVENUE).
