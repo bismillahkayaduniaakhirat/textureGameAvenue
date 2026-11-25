@@ -19,8 +19,8 @@ const CONFIG = {
     { n: 2, coins: 550, prize: 'Kaos OOT-SS26 (hitam atau putih)' },
   ],
   SEASON: { id: 'S1', name: 'Season 1', ends_at: '2027-03-01T00:00:00+07:00' },
-  NOTIFY_EMAIL: '',      // set in Supabase game_settings ('notify_email') to receive milestone winner alerts via FormSubmit
-  NOTIFY_WEBHOOK: '',    // or set ('notify_webhook') to POST milestone winner JSON to Google Apps Script / webhook
+  NOTIFY_EMAIL: 'hello.texturecoffee@gmail.com', // default Texture email for milestone winner alerts (server: notify_email)
+  NOTIFY_WEBHOOK: '',    // optional webhook URL in Supabase game_settings ('notify_webhook')
   // OOT Wardrobe catalogue (server: tex_items). coins = Wardrobe price.
   ITEMS: [
     { id: 's1_jersey', season: 'S1', slot: 'outfit', name: 'OOT-SS25 "Pas Presse de Vivre" Jersey', coins: 37 },
@@ -93,8 +93,8 @@ async function loadSettings() {
     if (st.fnb_rate) CONFIG.FNB_RATE = +st.fnb_rate;
     if (st.merch_rate) CONFIG.MERCH_RATE = +st.merch_rate;
     if (st.coin_unit_rp) CONFIG.COIN_UNIT_RP = +st.coin_unit_rp;
-    if (typeof st.notify_email === 'string') CONFIG.NOTIFY_EMAIL = st.notify_email.trim();
-    if (typeof st.notify_webhook === 'string') CONFIG.NOTIFY_WEBHOOK = st.notify_webhook.trim();
+    if (typeof st.notify_email === 'string' && st.notify_email.trim()) CONFIG.NOTIFY_EMAIL = st.notify_email.trim();
+    if (typeof st.notify_webhook === 'string' && st.notify_webhook.trim()) CONFIG.NOTIFY_WEBHOOK = st.notify_webhook.trim();
     rescaleGuestTex();
   } catch (e) { console.warn(e); }
 }

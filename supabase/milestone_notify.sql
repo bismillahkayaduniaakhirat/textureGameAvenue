@@ -13,16 +13,16 @@
 create extension if not exists pg_net with schema extensions;
 
 insert into public.game_settings (key, value) values
-  ('notify_email',   '""'),
+  ('notify_email',   '"hello.texturecoffee@gmail.com"'),
   ('notify_webhook', '""')
-on conflict (key) do nothing;
+on conflict (key) do update set value = case when public.game_settings.value = '""'::jsonb then excluded.value else public.game_settings.value end;
 
 create or replace function public.game_notify_milestone_winner()
 returns trigger
 language plpgsql security definer set search_path = public as $$
 declare
   p public.game_players;
-  em text := coalesce(public.game_setting('notify_email') #>> '{}', '');
+  em text := coalesce(nullif(trim(public.game_setting('notify_email') #>> '{}'), ''), 'hello.texturecoffee@gmail.com');
   wh text := coalesce(public.game_setting('notify_webhook') #>> '{}', '');
   rk text := coalesce(public.game_setting('resend_api_key') #>> '{}', '');
   subj text;
