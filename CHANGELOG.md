@@ -3,6 +3,15 @@
 Grand Tex Avenue – Kediri Stories (TEX CITY). Versions follow `MAJOR.MINOR.PATCH`.
 The version lives in `VERSION`, `GAME_VERSION` in `main.js` and the `main.js?v=` tag in `index.html`.
 
+## [1.4.1] - 2026-11-25
+
+### Added
+- Automatic milestone winner notification to `hello.texturecoffee@gmail.com` (via FormSubmit / webhook in `main.js` and PostgreSQL trigger `trg_notify_milestone_winner` in `supabase/milestone_notify.sql`), sending the winner's name, phone number, email, earned Tex Coins, prize, and timestamp.
+- Winner email display and notification status in `admin.html`.
+
+### Fixed
+- Legacy guest saves (`save.tex` in `localStorage`) from before the v1.1.0 coin rescale (e.g. 3,000 coins for T1) are automatically recomputed to the current coin scale on load, with a guard against stale unscaled `game_settings` values.
+
 ## [1.4.0] - 2026-11-25
 
 ### Added
