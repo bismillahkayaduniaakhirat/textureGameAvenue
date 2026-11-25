@@ -6,7 +6,7 @@ import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
    TEX CITY / Grand Tex Avenue - mini open-world web game (Kediri, sunset)
    Edit CONFIG below. Server values (Supabase game_settings) override it.
    ========================================================= */
-export const GAME_VERSION = '1.3.0'; // keep in step with VERSION and CHANGELOG.md
+export const GAME_VERSION = '1.4.0'; // keep in step with VERSION and CHANGELOG.md
 window.__ootVersion = GAME_VERSION;
 const CONFIG = {
   FNB_RATE: 10, MERCH_RATE: 10, COIN_UNIT_RP: 15000, // Tex Coins per Rp15.000 (server: fnb_rate / merch_rate / coin_unit_rp)
@@ -442,6 +442,7 @@ const NAMED = [
   { id: 'rukunwarga', name: 'TOKO KOPI RUKUN WARGA', pick: [175.4, -336.3], street: 'Jalan Stasiun', kind: 'cafe', wall: '#4a4440', roof: '#3a3634', accent: '#f4f1ea', fg: '#1a1a1a', h: 5, hx: 5 },
   { id: 'st18', name: 'ST 18', pick: [233, -357.7], street: 'Jalan Stasiun', kind: 'cafe', wall: '#ece4cf', roof: '#8a8276', accent: '#1f5a46', fg: '#f4ecd4', h: 8, hx: 8 },
   { id: 'giekie', name: 'GIE KIE KONG SOE', ll: [-7.8177181, 112.0110774], kind: 'temple', wall: '#b8302a', roof: '#2f6a4a', accent: '#b3262a', fg: '#ffd24a', h: 6 },
+  { id: 'filadelfia', name: 'GEREJA FILADELFIA', ll: [-7.8180620, 112.0108344], street: 'Jalan Dokter Setiabudi', kind: 'church', wall: '#f2efe6', roof: '#7a4430', accent: '#1f3a68', fg: '#ffd86a', h: 7 },
 ];
 {
   const lat0 = -7.81925, lon0 = 112.01125, kx = 111320 * Math.cos(lat0 * Math.PI / 180), kz = 110540; // same frame as tools/build_kediri.py
@@ -770,6 +771,38 @@ const FACADE = {
     for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) R(dx + 0.2 + i * (dw - 0.5) / 3, 1.1 + j * 0.8, 0.1, 0.1, '#e0b040'); // door studs
     for (const x of [dx - 1.0, dx + dw + 1.0]) { R(x - 0.04, 3.7, 0.08, 0.35, '#e0b040'); g.fillStyle = '#ff3a2a'; g.beginPath(); g.ellipse(x * sx, Y(3.3), 0.38 * sx, 0.45 * sx, 0, 0, 7); g.fill(); R(x - 0.15, 2.8, 0.3, 0.08, '#e0b040'); }
     if (h > 5) { R(L / 2 - 1.7, 3.95, 3.4, 0.7, '#1a1a1a'); fit('GIE KIE KONG SOE', L / 2, 4.3, 0.42, 3.1, '#ffd24a'); }
+  },
+  // Pentecostal church front: warm cream walls, stone plinth, tall arched stained-glass windows, timber double doors, gold cross & signboard
+  filadelfia(p) {
+    const { L, h, R, speck, fit, g, sx, sy, Y } = p;
+    R(0, 0, L, h, '#f2efe6'); speck(0, 0, L, h, ['#e6e2d6', '#faf7ef'], 180);
+    R(0, 0, L, 0.65, '#8a847a'); R(0, 0.65, L, 0.08, '#6a645a');
+    R(0, h - 0.45, L, 0.45, '#1f3a68'); R(0, h - 0.53, L, 0.08, '#d8b04a');
+    for (const x of [0.25, L - 0.7]) R(x, 0.65, 0.45, h - 1.1, '#ded9cc');
+    // central portal + timber double doors
+    const dw = Math.min(2.6, L * 0.24), dx = L / 2 - dw / 2;
+    R(dx - 0.25, 0.65, dw + 0.5, 3.1, '#d8d2c2');
+    R(dx, 0.65, dw, 2.85, '#5a321e'); R(L / 2 - 0.04, 0.65, 0.08, 2.85, '#3a1e10');
+    for (const s of [-1, 1]) R(L / 2 + s * 0.18 - 0.03, 1.8, 0.06, 0.35, '#e0b040');
+    g.fillStyle = '#1f3a68'; g.beginPath(); g.arc((L / 2) * sx, Y(3.5), (dw / 2 + 0.12) * sx, Math.PI, 0); g.fill();
+    g.fillStyle = '#ffd86a'; g.beginPath(); g.arc((L / 2) * sx, Y(3.5), (dw / 2 - 0.08) * sx, Math.PI, 0); g.fill();
+    // gold Latin cross above the entrance arch
+    const cy = Math.min(h - 1.55, 5.15);
+    R(L / 2 - 0.1, cy - 0.55, 0.2, 1.35, '#d8a628'); R(L / 2 - 0.45, cy + 0.25, 0.9, 0.2, '#d8a628');
+    // arched stained-glass windows left and right
+    const span = dx - 1.3;
+    for (const side of [-1, 1]) for (const off of span > 5 ? [1.6, 3.8] : [2.0]) {
+      const wx = L / 2 + side * (dw / 2 + off); if (wx < 1.2 || wx > L - 1.2) continue;
+      const ww = 1.1, bot = 1.35, top = Math.min(h - 1.6, 4.3);
+      R(wx - ww / 2 - 0.1, bot - 0.1, ww + 0.2, top - bot + 0.1, '#d8d2c2');
+      const gr = g.createLinearGradient(0, Y(top), 0, Y(bot)); gr.addColorStop(0, '#2a5a9a'); gr.addColorStop(0.55, '#4a8ad4'); gr.addColorStop(1, '#e8b84a');
+      g.fillStyle = gr; g.fillRect((wx - ww / 2) * sx, Y(top), ww * sx, (top - bot) * sy);
+      g.beginPath(); g.arc(wx * sx, Y(top), (ww / 2) * sx, Math.PI, 0); g.fill();
+      R(wx - 0.03, bot, 0.06, top - bot, '#f2efe6'); R(wx - ww / 2, (bot + top) / 2, ww, 0.06, '#f2efe6');
+    }
+    const sw = Math.min(L - 1.6, 7.2);
+    R(L / 2 - sw / 2, 3.85, sw, 0.65, '#1f3a68');
+    fit('GPdI FILADELFIA', L / 2, 4.18, 0.38, sw - 0.5, '#ffd86a');
   },
   // Jl. Stasiun coffee shop: dark grey-brown front, white-framed glass doors, green steel canopy with bulbs,
   // white name sign with a black mark, plants on the roof edge and by the door
@@ -1613,11 +1646,11 @@ function addBike(x, z, heading, col, ev = false) {
 const VEH = { bike: { acc: 15, brake: 26, max: 24, rev: -6, turn: 2.1, r: 0.9 }, ev: { acc: 19, brake: 30, max: 34, rev: -8, turn: 1.8, r: 1.25 } };
 let bike = addBike(33, 6.5, Math.PI / 2, '#e9e6e0'); // the white one next to Texture Coffee
 MAP.bikes.forEach(([x, z, h], i) => addBike(x, z, h, ['#b3262a', '#2a2a2a', '#3c5a8a', '#d8b04a', '#e9e6e0', '#4a7a4a'][i % 6]));
-// parked city EVs: one in front of Texture Coffee, the rest around town (x, z, heading, colour)
+// parked city EVs: one in front of Texture Coffee, the rest at the roadside clear of traffic lanes (x, z, heading, colour)
 const EV_SPOTS = [[38, 9.5, Math.PI / 2, '#a3141b'],
   [312, -355.5, -3.1, '#e9e6e0'],   // Stasiun Kediri forecourt
-  [108.1, -486.2, -0.12, '#8fbcd8'], // Aries Motor, Jl. Dhoho
-  [-131.2, -79.2, -0.02, '#c7d98a']]; // Setiabudi 6AM / Tropis corner
+  [105.0, -476.5, -0.12, '#8fbcd8'], // Aries Motor, Jl. Dhoho roadside
+  [-132.4, -79.2, -0.02, '#c7d98a']]; // Setiabudi 6AM / Tropis corner roadside
 for (const [x, z, h, col] of EV_SPOTS) addBike(x, z, h, col, true);
 
 /* ---------------- NPC pedestrians ---------------- */
@@ -1691,12 +1724,12 @@ function frontSpot(id, off = 3) { // standing spot in front of a named building
   return freeNear(f.mx + f.nx * off, f.mz + f.nz * off);
 }
 const llSpot = (ll) => kerbFront(...latLonToGame(ll[0], ll[1]));
-const SETONO = [-7.8163776, 112.0116698], ORION = [-7.8159821, 112.0142145];
+const SETONO = [-7.8163776, 112.0116698], FILADELFIA = [-7.8180620, 112.0108344];
 // named pins on the full map (client list). src: a NAMED building id, or [lat, lon]; null = location still unknown
 const MAP_PINS = [
   ['ARIES MOTOR', 'aries'], ['STASIUN KEDIRI', 'stasiun'], ['TOKO KOPI RUKUN WARGA', 'rukunwarga'], ['ST 18', 'st18'],
   ['HOTEL GRAND SURYA', 'surya'], ['SKDP', 'skdp'], ['TROPIS COFFEE', 'tropis'], ['SETIABUDI 6AM', 'setiabudi'],
-  ['ASTONISH', 'astonish'], ['WARKOP SOPO', 'sopo'], ['GIE KIE KONG SOE', 'giekie'], ['SETONO GEDONG', SETONO],
+  ['ASTONISH', 'astonish'], ['WARKOP SOPO', 'sopo'], ['GIE KIE KONG SOE', 'giekie'], ['GEREJA FILADELFIA', 'filadelfia'], ['SETONO GEDONG', SETONO],
 ];
 let PIN_POS = null;
 function mapPins() { // resolved once: [name, x, z]
@@ -1832,11 +1865,11 @@ const MDEF = {
     ] },
   T4: { name: 'Order Delivery', unit: 'Pesanan', desc: '5 pesanan dari Texture Coffee menunggu. Antar semua ke pelanggan. Naik motor biar cepat!', at: () => SPOT.texture,
     stages: () => [orderTargets()] },
-  T5: { name: 'Kediri Heritage Walk', desc: 'Jalan-jalan ke Stasiun Kediri, Makam Setono Gedong, lalu Toko Roti Orion.', at: () => SPOT.texture,
+  T5: { name: 'Kediri Heritage Walk', desc: 'Jalan-jalan ke Stasiun Kediri, Makam Setono Gedong, lalu Gereja Filadelfia Pantekosta.', at: () => SPOT.texture,
     stages: () => [
       [tgt(frontSpot('stasiun'), { label: 'STASIUN KEDIRI', say: ['Ini Stasiun Kediri. Dari sini kereta menghubungkan Kediri dengan kota-kota lain di Jawa.'] })],
       [tgt(llSpot(SETONO), { label: 'SETONO GEDONG', say: ['Ini kawasan Makam Setono Gedong, salah satu situs bersejarah di Kediri. Jaga sikap kalau berkunjung, ya.'] })],
-      [tgt(llSpot(ORION), { label: 'ROTI ORION', say: ['Ini Toko Roti Orion, toko roti lawas di Kediri. Cocok buat oleh-oleh.'] })],
+      [tgt(frontSpot('filadelfia'), { label: 'GEREJA FILADELFIA', say: ['Ini Gereja Filadelfia Pantekosta (GPdI Filadelfia), salah satu gereja bersejarah di kawasan Pakelan, Kediri.'] })],
     ] },
   T6: { name: 'Merch Hunt Clues', unit: 'Petunjuk', desc: 'Cari 3 petunjuk tentang merch OutOfTex di Astonish, Setiabudi 6AM, dan Warkop Sopo 1970.', at: () => SPOT.texture,
     stages: () => [[
@@ -2928,8 +2961,9 @@ async function setEquip(eq) {
 $('wrClose').onclick = closeWardrobe;
 
 /* ---------------- multiplayer (Supabase Realtime broadcast + presence, nothing stored) ---------------- */
-// Room = channel "texcity-N", 20 players per room by join order; extra players move to the next room.
+// Room = channel "texcity-N", 50 players per room by join order; extra players move to the next room.
 // Position goes out ~4x per second while moving and every 3 s when standing still.
+const MP_CAP = 50;
 const MP = { ch: null, room: 0, id: Math.random().toString(36).slice(2, 10), name: '', t0: Date.now(), peers: new Map(), allowed: null,
   sendT: 0, last: '', lastEmote: -99, sentEmote: -99, count: 1 };
 const EMOTES = ['👋', '👍', '😊', '💃'];
@@ -2954,10 +2988,10 @@ function mpRename() { MP.name = mpName(); MP.last = ''; MP.ch?.track({ n: MP.nam
 function mpSync() {
   if (!MP.ch) return;
   const list = Object.entries(MP.ch.presenceState()).map(([k, v]) => ({ k, t: v[0]?.t ?? 0 })).sort((a, b) => a.t - b.t || (a.k < b.k ? -1 : 1));
-  if (list.findIndex((x) => x.k === MP.id) >= 20 && MP.room < 50) { const r = MP.room + 1; mpLeave(); mpJoin(r); toast(`Room ${r - 1} penuh. Pindah ke room ${r}.`); return; }
-  MP.allowed = new Set(list.slice(0, 20).map((x) => x.k));
+  if (list.findIndex((x) => x.k === MP.id) >= MP_CAP && MP.room < 50) { const r = MP.room + 1; mpLeave(); mpJoin(r); toast(`Room ${r - 1} penuh. Pindah ke room ${r}.`); return; }
+  MP.allowed = new Set(list.slice(0, MP_CAP).map((x) => x.k));
   for (const id of [...MP.peers.keys()]) if (!MP.allowed.has(id)) mpDrop(id);
-  MP.count = Math.max(1, Math.min(list.length, 20));
+  MP.count = Math.max(1, Math.min(list.length, MP_CAP));
   $('mpInfo').textContent = `ROOM ${MP.room} · ${MP.count} ONLINE`;
 }
 const sanitizeEq = (eq) => { const o = {}; if (eq && typeof eq === 'object') for (const [k] of SLOTS) if (typeof eq[k] === 'string' && ITEM(eq[k])?.slot === k) o[k] = eq[k]; return o; };
@@ -2966,7 +3000,7 @@ function mpState(p) {
   if (MP.allowed && MP.allowed.size && !MP.allowed.has(p.id)) return;
   let pr = MP.peers.get(p.id);
   if (!pr) {
-    if (MP.peers.size >= 19) return;
+    if (MP.peers.size >= MP_CAP - 1) return;
     const c = makeChar({ build: { h: 1.03, w: 1.02 } }); scene.add(c.group);
     pr = { c, x: p.x, z: p.z, y: +p.y || 0, h: +p.h || 0, eqKey: null, nameKey: '', label: null, bike: null };
     MP.peers.set(p.id, pr);
