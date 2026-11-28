@@ -6,7 +6,7 @@ import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
    TEX CITY / Grand Tex Avenue - mini open-world web game (Kediri, sunset)
    Edit CONFIG below. Server values (Supabase game_settings) override it.
    ========================================================= */
-export const GAME_VERSION = '1.4.1'; // keep in step with VERSION and CHANGELOG.md
+export const GAME_VERSION = '1.4.2'; // keep in step with VERSION and CHANGELOG.md
 window.__ootVersion = GAME_VERSION;
 const CONFIG = {
   FNB_RATE: 10, MERCH_RATE: 10, COIN_UNIT_RP: 15000, // Tex Coins per Rp15.000 (server: fnb_rate / merch_rate / coin_unit_rp)
@@ -106,13 +106,14 @@ const isTouch = matchMedia('(pointer:coarse)').matches || 'ontouchstart' in wind
 if (isTouch) document.body.classList.add('touch');
 
 /* ---------------- audio ---------------- */
-const bgm = new Audio('assets/bgm.mp3?v=2'); bgm.loop = true; bgm.volume = 0.35;
+const bgm = new Audio(); bgm.preload = 'none'; bgm.loop = true; bgm.volume = 0.35; // src is set on first play, so the title screen does not download it
+function playBgm() { if (!bgm.src) bgm.src = 'assets/bgm.mp3?v=3'; bgm.play().catch(() => {}); }
 const sfxSrc = { buy: 'assets/buy.mp3', whoosh: 'assets/whoosh.mp3' };
 function sfx(name, vol = 0.6) {
   if (save.muted) return;
   const a = new Audio(sfxSrc[name]); a.volume = vol; a.play().catch(() => {});
 }
-function applyMute() { $('btnMute').textContent = save.muted ? '✕' : '♪'; if (save.muted) bgm.pause(); else if (started) bgm.play().catch(() => {}); }
+function applyMute() { $('btnMute').textContent = save.muted ? '✕' : '♪'; if (save.muted) bgm.pause(); else if (started) playBgm(); }
 
 /* ---------------- map data (real Kota Kediri, © OpenStreetMap contributors) ---------------- */
 const MAP = await (await fetch('assets/kediri.json')).json();
@@ -2030,7 +2031,7 @@ const POSTERS = [
   { title: 'Texture Coffee — Koran', file: 'assets/poster_tex_koran.jpg', dl: 'Texture-Coffee-Koran.jpg', aspect: 1333 / 2000 },
   { title: 'Texture Coffee — Menu', file: 'assets/poster_tex_menu.jpg', dl: 'Texture-Coffee-Menu.jpg', aspect: 1333 / 2000 },
 ];
-for (const po of POSTERS) { po.tex = texLoader.load(po.file); po.tex.colorSpace = THREE.SRGBColorSpace; po.mat = new THREE.MeshBasicMaterial({ map: po.tex }); }
+for (const po of POSTERS) { po.tex = texLoader.load(po.file.replace('.jpg', '_s.jpg')); po.tex.colorSpace = THREE.SRGBColorSpace; po.mat = new THREE.MeshBasicMaterial({ map: po.tex }); }
 const blankPosterMat = lam({ map: canvasTex(32, 48, (g, w, h) => { g.fillStyle = '#d9cfb8'; g.fillRect(0, 0, w, h); noise(g, w, h, 25, 2); g.fillStyle = '#8a7a5a'; g.font = 'bold 6px monospace'; g.textAlign = 'center'; g.fillText('TEMPEL', w / 2, h / 2 - 2); g.fillText('DI SINI', w / 2, h / 2 + 6); }) });
 // [x, z, facing yaw] at real kerbsides around town, facing the road. Spot 0 = in front of Texture Coffee (board removed, kept for save indices)
 const POSTER_SPOTS = MAP.posters;
@@ -2879,7 +2880,7 @@ function dlgEnd() {
 $('dialog').addEventListener('pointerdown', (e) => { if (e.target.id !== 'dlgSkip') dlgNext(); });
 $('dlgSkip').onclick = (e) => { e.stopPropagation(); dlgEnd(); };
 addEventListener('keydown', (e) => { if (DLG.on && (e.code === 'Space' || e.code === 'Enter')) { e.preventDefault(); dlgNext(); } });
-document.addEventListener('visibilitychange', () => { if (document.hidden) bgm.pause(); else if (started && !save.muted) bgm.play().catch(() => {}); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) bgm.pause(); else if (started && !save.muted) playBgm(); });
 
 /* ---------------- OOT Wardrobe (Texture Coffee) ---------------- */
 const SLOTS = [['outfit', 'Outfit'], ['eyewear', 'Kacamata'], ['fragrance', 'Parfum'], ['hand', 'Cincin'], ['keychain', 'Keychain'], ['drink', 'Tumbler']];

@@ -3,6 +3,14 @@
 Grand Tex Avenue – Kediri Stories (TEX CITY). Versions follow `MAJOR.MINOR.PATCH`.
 The version lives in `VERSION`, `GAME_VERSION` in `main.js` and the `main.js?v=` tag in `index.html`.
 
+## [1.4.2] - 2026-11-28
+
+### Changed
+- Faster first load (about 3.5 MB less before the game is playable):
+  - Background music (`assets/bgm.mp3`) re-encoded at 80 kbps (2.1 MB to 1.2 MB) and only downloaded when the music first plays after the game starts, not on the title screen.
+  - Notice boards use 640 px copies of the posters (`assets/poster_*_s.jpg`, 38-73 KB each); the full-size poster loads only when it is opened or downloaded.
+- New `_headers`: files in `/assets/` are cached by the browser for 1 hour (then revalidated in the background for up to 1 day), so repeat visits do not re-check every asset.
+
 ## [1.4.1] - 2026-11-25
 
 ### Added

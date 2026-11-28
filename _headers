@@ -1,0 +1,6 @@
+# Netlify response headers.
+# Assets: browsers keep them 1 hour without asking again, then up to 1 day while they re-check in the background.
+# (File names are not hashed, so a changed asset reaches players within an hour.)
+# Pages and unversioned scripts (index.html, net.js, style.css) keep Netlify's default: always re-check.
+/assets/*
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
